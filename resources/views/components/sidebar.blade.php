@@ -50,7 +50,7 @@
                         <ul class="nav nav-collapse">
 
                             <li>
-                                <a href="">
+                                <a href="{{ session('idgudang') ? route('gudang.ppe-masuk', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">PPE Masuk</span>
                                 </a>
                             </li>
@@ -116,7 +116,7 @@
                                 </a>
                             </li>
                             <li>
-                                <a href="">
+                                <a href="{{ session('idgudang') ? route('gudang.permintaan', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Data Permintaan</span>
                                 </a>
                             </li>

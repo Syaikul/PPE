@@ -20,6 +20,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/gudang/{idgudang}/personel', [App\Http\Controllers\PersonelController::class, 'store'])->name('gudang.personel.store');
     Route::put('/gudang/{idgudang}/personel/{id}', [App\Http\Controllers\PersonelController::class, 'update'])->name('gudang.personel.update');
     Route::delete('/gudang/{idgudang}/personel/{id}', [App\Http\Controllers\PersonelController::class, 'destroy'])->name('gudang.personel.destroy');
+
+    Route::get('/gudang/{idgudang}/permintaan', [App\Http\Controllers\PermintaanController::class, 'index'])->name('gudang.permintaan');
+    Route::post('/gudang/{idgudang}/permintaan', [App\Http\Controllers\PermintaanController::class, 'store'])->name('gudang.permintaan.store');
+    Route::get('/gudang/{idgudang}/permintaan/{id}', [App\Http\Controllers\PermintaanController::class, 'show'])->name('gudang.permintaan.show');
+    Route::put('/gudang/{idgudang}/permintaan/{id}', [App\Http\Controllers\PermintaanController::class, 'update'])->name('gudang.permintaan.update');
+    Route::delete('/gudang/{idgudang}/permintaan/{id}', [App\Http\Controllers\PermintaanController::class, 'destroy'])->name('gudang.permintaan.destroy');
+    Route::post('/gudang/{idgudang}/permintaan/{permintaanId}/item/{itemId}/kedatangan', [App\Http\Controllers\PermintaanController::class, 'storeKedatangan'])->name('gudang.permintaan.kedatangan');
+
+    Route::get('/gudang/{idgudang}/ppe-masuk', [App\Http\Controllers\PpeMasukController::class, 'index'])->name('gudang.ppe-masuk');
 });
 
 Route::get('/dashboard', function () {
