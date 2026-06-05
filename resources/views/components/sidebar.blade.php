@@ -33,16 +33,14 @@
 
                 <!-- Dashboard -->
                 <li class="nav-item">
-                    <a href="widgets.html">
-                        <i class="fas fa-home"></i>
-                        <p>Dashboard</p>
-                    </a>
-                </li>
-
+    <a href="/dashboard">
+        <i class="fas fa-home"></i>
+        <p>Dashboard</p>
+    </a>
+</li>
                 <!-- Data Stok -->
-                <li class="nav-item active">
+                <li class="nav-item">
                     <a data-bs-toggle="collapse" href="#datastok" class="collapsed" aria-expanded="false">
-
                         <i class="fas fa-desktop"></i>
                         <p>Data Stok</p>
                         <span class="caret"></span>
@@ -64,7 +62,7 @@
                             </li>
 
                             <li>
-                                <a href="">
+                                <a href="{{ session('idgudang') ? route('gudang.stok', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Stok</span>
                                 </a>
                             </li>
@@ -74,7 +72,7 @@
                 </li>
 
                 <!-- Personel -->
-                <li class="nav-item active">
+                <li class="nav-item">
                     <a data-bs-toggle="collapse" href="#personel" class="collapsed" aria-expanded="false">
 
                         <i class="fas fa-users"></i>
@@ -86,7 +84,7 @@
                         <ul class="nav nav-collapse">
 
                             <li>
-                                <a href="">
+                                <a href="{{ session('idgudang') ? route('gudang.personel', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Data Personel</span>
                                 </a>
                             </li>
@@ -102,7 +100,7 @@
                 </li>
 
                 <!-- Permintaan PPE -->
-                <li class="nav-item active">
+                <li class="nav-item">
                     <a data-bs-toggle="collapse" href="#permintaanppe" class="collapsed" aria-expanded="false">
 
                         <i class="fas fa-clipboard-list"></i>
@@ -127,7 +125,7 @@
                 </li>
 
                 <!-- Mob-Demob -->
-                <li class="nav-item active">
+                <li class="nav-item">
                     <a data-bs-toggle="collapse" href="#mobdemob" class="collapsed" aria-expanded="false">
 
                         <i class="fas fa-truck"></i>
@@ -159,7 +157,7 @@
                 </li>
 
                 <!-- Peminjaman PPE -->
-                <li class="nav-item active">
+                <li class="nav-item">
                     <a data-bs-toggle="collapse" href="#peminjamanppe" class="collapsed" aria-expanded="false">
 
                         <i class="fas fa-handshake"></i>
