@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Stok;
+use App\Services\BarangVarianService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -26,23 +27,11 @@ class StokController extends Controller
         // Ambil daftar barang + varian dari API untuk dropdown
         $barangResponse = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
         $barangList = $barangResponse->successful() ? ($barangResponse->json('data') ?? []) : [];
+        $varianOptions = BarangVarianService::buildOptions($barangList);
 
-        // Flatten jadi list varian dengan label lengkap: "Coverall - Ukuran L"
-        $varianOptions = [];
-        foreach ($barangList as $barang) {
-            if (!empty($barang['varian'])) {
-                foreach ($barang['varian'] as $varian) {
-                    $varianOptions[] = [
-                        'idvarian'  => $varian['idvarian'],
-                        'label'     => $barang['namabarang'] . ' — ' . $varian['namavarian'],
-                        'kode'      => $varian['kode_lengkap'] ?? '',
-                    ];
-                }
-            }
-        }
-
-        // Ambil stok milik gudang ini, beserta label barang dari varianOptions
+        // Tabel stok hanya menampilkan data yang sudah diinput user.
         $stokList = Stok::where('idgudang', $idgudang)->latest()->get();
+
         $varianMap = collect($varianOptions)->keyBy('idvarian');
 
         return view('stok.index', compact('idgudang', 'gudang', 'varianOptions', 'stokList', 'varianMap'));

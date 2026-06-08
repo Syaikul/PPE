@@ -6,6 +6,7 @@ use App\Models\Permintaan;
 use App\Models\PermintaanItem;
 use App\Models\PermintaanKedatangan;
 use App\Models\Stok;
+use App\Services\BarangVarianService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -138,18 +139,6 @@ class PermintaanController extends Controller
         $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
         $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
 
-        $map = [];
-        foreach ($barangList as $barang) {
-            if (!empty($barang['varian'])) {
-                foreach ($barang['varian'] as $varian) {
-                    $map[$varian['idvarian']] = [
-                        'label' => $barang['namabarang'] . ' ' . $varian['namavarian'],
-                        'kode'  => $varian['kode_lengkap'] ?? '',
-                    ];
-                }
-            }
-        }
-
-        return collect($map);
+        return BarangVarianService::buildMap($barangList);
     }
 }

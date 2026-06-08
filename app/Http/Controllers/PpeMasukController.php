@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PermintaanKedatangan;
+use App\Services\BarangVarianService;
 use Illuminate\Support\Facades\Http;
 
 class PpeMasukController extends Controller
@@ -40,18 +41,6 @@ class PpeMasukController extends Controller
         $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
         $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
 
-        $map = [];
-        foreach ($barangList as $barang) {
-            if (!empty($barang['varian'])) {
-                foreach ($barang['varian'] as $varian) {
-                    $map[$varian['idvarian']] = [
-                        'label' => $barang['namabarang'] . ' ' . $varian['namavarian'],
-                        'kode'  => $varian['kode_lengkap'] ?? '',
-                    ];
-                }
-            }
-        }
-
-        return collect($map);
+        return BarangVarianService::buildMap($barangList);
     }
 }

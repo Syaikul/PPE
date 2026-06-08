@@ -69,20 +69,24 @@
                                 <span class="badge bg-success">{{ $stok->qty }}</span>
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-warning btn-ubah"
-                                    data-id="{{ $stok->id }}"
-                                    data-idbarangvarian="{{ $stok->idbarangvarian }}"
-                                    data-qty="{{ $stok->qty }}"
-                                    data-bs-toggle="modal" data-bs-target="#modalUbahStok">
-                                    Ubah
-                                </button>
-                                <form action="{{ route('gudang.stok.destroy', [$idgudang, $stok->id]) }}"
-                                    method="POST" class="d-inline"
-                                    onsubmit="return confirm('Hapus stok ini?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
-                                </form>
+                                @if($stok->id)
+                                    <button class="btn btn-sm btn-warning btn-ubah"
+                                        data-id="{{ $stok->id }}"
+                                        data-idbarangvarian="{{ $stok->idbarangvarian }}"
+                                        data-qty="{{ $stok->qty }}"
+                                        data-bs-toggle="modal" data-bs-target="#modalUbahStok">
+                                        Ubah
+                                    </button>
+                                    <form action="{{ route('gudang.stok.destroy', [$idgudang, $stok->id]) }}"
+                                        method="POST" class="d-inline"
+                                        onsubmit="return confirm('Hapus stok ini?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                                    </form>
+                                @else
+                                    <span class="text-muted small">Belum diinput</span>
+                                @endif
                             </td>
                         </tr>
                     @endforeach
@@ -105,8 +109,9 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Barang — Varian</label>
-                        <select name="idbarangvarian" class="form-select" required>
-                            <option value="" disabled selected>— Pilih Barang —</option>
+                        <small class="text-muted d-block mb-1">Ketik keyword (nama / kode) untuk mencari barang</small>
+                        <select name="idbarangvarian" id="tambahBarangSelect" class="form-select" required>
+                            <option value=""></option>
                             @foreach($varianOptions as $v)
                                 <option value="{{ $v['idvarian'] }}">
                                     {{ $v['label'] }}{{ $v['kode'] ? ' ('.$v['kode'].')' : '' }}
@@ -145,8 +150,9 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Barang — Varian</label>
+                        <small class="text-muted d-block mb-1">Ketik keyword (nama / kode) untuk mencari barang</small>
                         <select name="idbarangvarian" id="ubahIdVarian" class="form-select" required>
-                            <option value="" disabled>— Pilih Barang —</option>
+                            <option value=""></option>
                             @foreach($varianOptions as $v)
                                 <option value="{{ $v['idvarian'] }}">
                                     {{ $v['label'] }}{{ $v['kode'] ? ' ('.$v['kode'].')' : '' }}
@@ -169,9 +175,44 @@
 </div>
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
 <script>
+    function initBarangSelect(selector, modalId) {
+        var $el = $(selector);
+        if ($el.hasClass('select2-hidden-accessible')) {
+            $el.select2('destroy');
+        }
+        $el.select2({
+            dropdownParent: $(modalId),
+            placeholder: 'Ketik keyword untuk cari barang...',
+            allowClear: true,
+            width: '100%',
+            language: {
+                noResults: function () { return 'Barang tidak ditemukan'; },
+                searching: function () { return 'Mencari...'; },
+                inputTooShort: function () { return 'Ketik untuk mencari barang'; },
+            },
+        });
+    }
+
     // Init DataTables
     $(document).ready(function () {
+        $('#modalTambahStok').on('shown.bs.modal', function () {
+            initBarangSelect('#tambahBarangSelect', '#modalTambahStok');
+        });
+
+        $('#modalTambahStok').on('hidden.bs.modal', function () {
+            $('#tambahBarangSelect').val(null).trigger('change');
+        });
+
+        $('#modalUbahStok').on('shown.bs.modal', function () {
+            var currentVal = $('#ubahIdVarian').val();
+            initBarangSelect('#ubahIdVarian', '#modalUbahStok');
+            if (currentVal) {
+                $('#ubahIdVarian').val(currentVal).trigger('change');
+            }
+        });
+
         $('#tabelStok').DataTable({
             language: {
                 lengthMenu: 'Tampilkan _MENU_ data',
@@ -187,7 +228,7 @@
                 zeroRecords: 'Data tidak ditemukan.',
             },
             columnDefs: [
-                { orderable: false, targets: 5 }  // kolom Aksi tidak sortable
+                { orderable: false, targets: 3 }  // kolom Aksi tidak sortable
             ]
         });
     });
