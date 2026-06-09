@@ -42,7 +42,7 @@
                         <!-- <th>ID</th> -->
                         <th>Kode Barang</th>
                         <th>Barang — Varian</th>
-                                             <!-- <th>ID Gudang</th> -->
+                        <th>Kategori</th>
                         <th>Qty</th>
                         <th>Aksi</th>
                     </tr>
@@ -63,8 +63,12 @@
                                     <span class="text-muted fst-italic">Varian #{{ $stok->idbarangvarian }}</span>
                                 @endif
                             </td>
-                            
-                                <!-- <td>{{ $stok->idgudang }}</td> -->
+                            <td>
+                                @php $kat = $stok->kategori ?? 'Consumable'; @endphp
+                                <span class="badge {{ $kat === 'Consumable' ? 'bg-info' : 'bg-secondary' }}">
+                                    {{ $kat }}
+                                </span>
+                            </td>
                             <td>
                                 <span class="badge bg-success">{{ $stok->qty }}</span>
                             </td>
@@ -74,6 +78,7 @@
                                         data-id="{{ $stok->id }}"
                                         data-idbarangvarian="{{ $stok->idbarangvarian }}"
                                         data-qty="{{ $stok->qty }}"
+                                        data-kategori="{{ $stok->kategori ?? 'Consumable' }}"
                                         data-bs-toggle="modal" data-bs-target="#modalUbahStok">
                                         Ubah
                                     </button>
@@ -123,6 +128,13 @@
                         @endif
                     </div>
                     <div class="mb-3">
+                        <label class="form-label fw-semibold">Kategori</label>
+                        <select name="kategori" class="form-select" required>
+                            <option value="Consumable" selected>Consumable</option>
+                            <option value="Non Consumable">Non Consumable</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label fw-semibold">Qty</label>
                         <input type="number" name="qty" class="form-control" placeholder="Masukkan jumlah" min="1" required>
                     </div>
@@ -158,6 +170,13 @@
                                     {{ $v['label'] }}{{ $v['kode'] ? ' ('.$v['kode'].')' : '' }}
                                 </option>
                             @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Kategori</label>
+                        <select name="kategori" id="ubahKategori" class="form-select" required>
+                            <option value="Consumable">Consumable</option>
+                            <option value="Non Consumable">Non Consumable</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -228,7 +247,7 @@
                 zeroRecords: 'Data tidak ditemukan.',
             },
             columnDefs: [
-                { orderable: false, targets: 3 }  // kolom Aksi tidak sortable
+                { orderable: false, targets: 4 }  // kolom Aksi tidak sortable
             ]
         });
     });
@@ -239,11 +258,13 @@
             var id           = this.dataset.id;
             var idVarian     = this.dataset.idbarangvarian;
             var qty          = this.dataset.qty;
+            var kategori     = this.dataset.kategori;
 
             document.getElementById('formUbah').action =
                 '/gudang/{{ $idgudang }}/stok/' + id;
             document.getElementById('ubahIdVarian').value = idVarian;
             document.getElementById('ubahQty').value = qty;
+            document.getElementById('ubahKategori').value = kategori;
         });
     });
 </script>

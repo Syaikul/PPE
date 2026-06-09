@@ -124,12 +124,11 @@
                             @endforeach
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Status</label>
-                        <select name="status" class="form-select" required>
-                            <option value="Offshore" selected>Offshore</option>
-                            <option value="Onshore">Onshore</option>
-                        </select>
+                    <input type="hidden" name="status" value="Offshore">
+                    <div class="alert alert-light border small mb-0">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Status personel default <strong>Offshore</strong> dan hanya berubah menjadi
+                        <strong>Onshore</strong> saat dipilih untuk Mobilisasi.
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -167,12 +166,10 @@
                             @endforeach
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Status</label>
-                        <select name="status" id="ubahStatus" class="form-select" required>
-                            <option value="Offshore">Offshore</option>
-                            <option value="Onshore">Onshore</option>
-                        </select>
+                    <input type="hidden" name="status" id="ubahStatus" value="Offshore">
+                    <div class="alert alert-light border small mb-0">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Status (<span id="ubahStatusLabel" class="fw-semibold">Offshore</span>) diatur otomatis melalui Mobilisasi.
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -207,6 +204,7 @@
             document.getElementById('formUbahPersonel').action =
                 '/gudang/{{ $idgudang }}/personel/' + this.dataset.id;
             document.getElementById('ubahStatus').value = this.dataset.status;
+            document.getElementById('ubahStatusLabel').textContent = this.dataset.status;
 
             var posisiIds = this.dataset.posisi ? this.dataset.posisi.split(',') : [];
             document.querySelectorAll('.ubah-posisi').forEach(function (cb) {

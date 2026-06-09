@@ -42,12 +42,14 @@ class StokController extends Controller
         $request->validate([
             'idbarangvarian' => 'required|integer',
             'qty'            => 'required|integer|min:1',
+            'kategori'       => 'required|in:Consumable,Non Consumable',
         ]);
 
         Stok::create([
             'idgudang'       => $idgudang,
             'idbarangvarian' => $request->idbarangvarian,
             'qty'            => $request->qty,
+            'kategori'       => $request->kategori,
         ]);
 
         return redirect()->route('gudang.stok', $idgudang)
@@ -59,12 +61,14 @@ class StokController extends Controller
         $request->validate([
             'idbarangvarian' => 'required|integer',
             'qty'            => 'required|integer|min:1',
+            'kategori'       => 'required|in:Consumable,Non Consumable',
         ]);
 
         $stok = Stok::where('idgudang', $idgudang)->findOrFail($id);
         $stok->update([
             'idbarangvarian' => $request->idbarangvarian,
             'qty'            => $request->qty,
+            'kategori'       => $request->kategori,
         ]);
 
         return redirect()->route('gudang.stok', $idgudang)

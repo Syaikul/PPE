@@ -56,7 +56,7 @@
                             </li>
 
                             <li>
-                                <a href="">
+                                <a href="{{ session('idgudang') ? route('gudang.ppe-keluar', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">PPE Keluar</span>
                                 </a>
                             </li>
@@ -90,7 +90,7 @@
                             </li>
 
                             <li>
-                                <a href="">
+                                <a href="{{ session('idgudang') ? route('gudang.pemakaian-ppe', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Data Pemakaian PPE</span>
                                 </a>
                             </li>
@@ -136,18 +136,18 @@
                     <div class="collapse" id="mobdemob">
                         <ul class="nav nav-collapse">
                             <li>
-                                <a href="">
+                                <a href="{{ session('idgudang') ? route('gudang.approval-demob', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Approval Demob</span>
                                 </a>
                             </li>
                             <li>
-                                <a href="">
+                                <a href="{{ session('idgudang') ? route('gudang.mobilisasi', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Mobilisasi</span>
                                 </a>
                             </li>
 
                             <li>
-                                <a href="">
+                                <a href="{{ session('idgudang') ? route('gudang.demobilisasi', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Demobilisasi</span>
                                 </a>
                             </li>
