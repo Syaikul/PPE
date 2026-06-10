@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Personel;
 use App\Models\PersonelPosisi;
+use App\Services\PersonelStatusService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -67,7 +68,7 @@ class PersonelController extends Controller
         $personel = Personel::create([
             'idgudang'   => $idgudang,
             'idpersonel' => $request->idpersonel,
-            'status'     => $request->status,
+            'status'     => PersonelStatusService::currentStatus((int) $request->idpersonel),
         ]);
 
         foreach (array_unique($request->idposisi) as $idposisi) {

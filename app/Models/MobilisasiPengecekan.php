@@ -12,6 +12,7 @@ class MobilisasiPengecekan extends Model
     protected $fillable = [
         'mobilisasi_personel_id',
         'idsubbarang',
+        'idbarangvarian',
         'jumlah',
         'status',
         'catatan',

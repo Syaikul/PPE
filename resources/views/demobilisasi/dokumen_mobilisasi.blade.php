@@ -27,7 +27,8 @@
                 <thead class="table-light">
                     <tr>
                         <th style="width:60px">No</th>
-                        <th>Nama PPE</th>
+                        <th>Nama PPE (Sub Barang)</th>
+                        <th>Varian</th>
                         <th>Kategori</th>
                         <th class="text-center" style="width:120px">Jumlah</th>
                     </tr>
@@ -37,6 +38,7 @@
                         <tr>
                             <td>{{ $i + 1 }}</td>
                             <td class="fw-semibold">{{ $item['label'] }}</td>
+                            <td>{{ $item['varian_label'] ?? '-' }}</td>
                             <td>
                                 <span class="badge {{ $item['kategori'] === 'Consumable' ? 'bg-info' : 'bg-secondary' }}">
                                     {{ $item['kategori'] }}
@@ -45,7 +47,7 @@
                             <td class="text-center">{{ $item['jumlah'] }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="text-center text-muted py-3">Tidak ada item yang dibawa.</td></tr>
+                        <tr><td colspan="5" class="text-center text-muted py-3">Tidak ada item yang dibawa.</td></tr>
                     @endforelse
                 </tbody>
             </table>

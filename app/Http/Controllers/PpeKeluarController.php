@@ -20,6 +20,7 @@ class PpeKeluarController extends Controller
         $gudang = $this->fetchGudang($idgudang);
         $personelMapApi = $this->fetchPersonelMap();
         $subBarangMap = $this->fetchSubBarangMap();
+        $varianMap = $this->fetchVarianMap();
 
         $keluarList = PpeKeluar::with('personel')
             ->where('idgudang', $idgudang)
@@ -27,7 +28,7 @@ class PpeKeluarController extends Controller
             ->latest('id')
             ->get();
 
-        return view('ppe_keluar.index', compact('idgudang', 'gudang', 'keluarList', 'personelMapApi', 'subBarangMap'));
+        return view('ppe_keluar.index', compact('idgudang', 'gudang', 'keluarList', 'personelMapApi', 'subBarangMap', 'varianMap'));
     }
 
     private function fetchGudang($idgudang): ?array
@@ -52,5 +53,13 @@ class PpeKeluarController extends Controller
         $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
 
         return BarangVarianService::buildSubBarangMap($barangList);
+    }
+
+    private function fetchVarianMap(): \Illuminate\Support\Collection
+    {
+        $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
+        $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
+
+        return BarangVarianService::buildMap($barangList);
     }
 }

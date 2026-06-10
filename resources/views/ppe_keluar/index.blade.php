@@ -21,7 +21,8 @@
             <table id="tabelPpeKeluar" class="table table-hover align-middle" style="width:100%">
                 <thead>
                     <tr>
-                        <th>Nama PPE</th>
+                        <th>Nama PPE (Sub Barang)</th>
+                        <th>Varian</th>
                         <th class="text-center">QTY</th>
                         <th>Tanggal</th>
                         <th>Penerima</th>
@@ -32,12 +33,16 @@
                     @foreach($keluarList as $row)
                         @php
                             $namaPpe = $subBarangMap[$row->idsubbarang]['label'] ?? 'Item #'.$row->idsubbarang;
+                            $namaVarian = $row->idbarangvarian
+                                ? ($varianMap[$row->idbarangvarian]['label'] ?? 'Varian #'.$row->idbarangvarian)
+                                : '-';
                             $penerima = $row->personel
                                 ? ($personelMapApi[$row->personel->idpersonel]['namapersonel'] ?? 'Personel #'.$row->personel->idpersonel)
                                 : ($personelMapApi[$row->idpersonel]['namapersonel'] ?? 'Personel #'.$row->idpersonel);
                         @endphp
                         <tr>
                             <td class="fw-semibold">{{ $namaPpe }}</td>
+                            <td>{{ $namaVarian }}</td>
                             <td class="text-center">{{ $row->qty }}</td>
                             <td>{{ $row->tanggal->format('d/m/Y') }}</td>
                             <td>{{ $penerima }}</td>

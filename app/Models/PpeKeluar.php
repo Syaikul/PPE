@@ -13,6 +13,7 @@ class PpeKeluar extends Model
         'idgudang',
         'idpersonel',
         'idsubbarang',
+        'idbarangvarian',
         'qty',
         'tanggal',
         'catatan',

@@ -73,6 +73,8 @@ class PemakaianPpeController extends Controller
             ->map(fn ($pid) => $posisiMap[$pid]['namaposisi'] ?? 'Posisi #'.$pid)
             ->implode(' / ');
 
+        $varianMap = $this->fetchVarianMap();
+
         // Riwayat keluar (lintas gudang) untuk orang ini, item non-consumable, dikelompokkan per item.
         $keluar = PpeKeluar::where('idpersonel', $personel->idpersonel)
             ->orderBy('tanggal')
@@ -80,7 +82,7 @@ class PemakaianPpeController extends Controller
             ->get()
             ->filter(fn ($k) => ($kategoriMap[$k->idsubbarang] ?? 'Non Consumable') !== 'Consumable');
 
-        $itemHistories = $keluar->groupBy('idsubbarang')->map(function ($rows, $idsub) use ($subBarangMap, $gudangMap) {
+        $itemHistories = $keluar->groupBy('idsubbarang')->map(function ($rows, $idsub) use ($subBarangMap, $gudangMap, $varianMap) {
             return [
                 'idsubbarang' => $idsub,
                 'label'       => $subBarangMap[$idsub]['label'] ?? 'Item #'.$idsub,
@@ -88,6 +90,9 @@ class PemakaianPpeController extends Controller
                     'no'      => $i + 1,
                     'tanggal' => $r->tanggal,
                     'catatan' => $r->catatan,
+                    'varian'  => $r->idbarangvarian
+                        ? ($varianMap[$r->idbarangvarian]['label'] ?? 'Varian #'.$r->idbarangvarian)
+                        : null,
                     'gudang'  => $gudangMap[$r->idgudang]['namagudang'] ?? 'Gudang #'.$r->idgudang,
                 ]),
             ];
@@ -143,5 +148,13 @@ class PemakaianPpeController extends Controller
         $kategoriMap = BarangVarianService::buildKategoriMap($barangList, $stokKategoriByVarian);
 
         return [$subBarangMap, $kategoriMap];
+    }
+
+    private function fetchVarianMap(): Collection
+    {
+        $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
+        $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
+
+        return BarangVarianService::buildMap($barangList);
     }
 }

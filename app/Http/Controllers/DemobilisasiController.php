@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\DemobPengecekan;
 use App\Models\Mobilisasi;
 use App\Models\MobilisasiPersonel;
-use App\Models\Personel;
 use App\Services\BarangVarianService;
+use App\Services\PersonelStatusService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -64,8 +64,11 @@ class DemobilisasiController extends Controller
             'tanggal_demob' => now()->toDateString(),
         ]);
 
-        // Personel kembali Offshore (tapi belum bisa dimob lagi sampai demob di-approve).
-        Personel::where('id', $mp->personel_id)->update(['status' => 'Offshore']);
+        // Personel kembali Offshore di semua gudang (belum bisa dimob lagi sampai demob di-approve).
+        $mp->load('personel');
+        if ($mp->personel) {
+            PersonelStatusService::syncOffshore($mp->personel->idpersonel);
+        }
 
         return back()->with('success', 'Personel di-demob. Silakan lakukan pengecekan kelengkapan.');
     }
@@ -79,6 +82,7 @@ class DemobilisasiController extends Controller
         $personelMapApi = $this->fetchPersonelMap();
         $posisiMap = $this->fetchPosisiMap();
         [$subBarangMap, $kategoriMap] = $this->fetchSubBarangData($idgudang);
+        $varianMap = $this->fetchVarianMapFromApi();
 
         $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($id);
         $mp = MobilisasiPersonel::with(['posisi', 'personel', 'pengecekan'])
@@ -93,9 +97,12 @@ class DemobilisasiController extends Controller
         $items = $mp->pengecekan
             ->where('status', 'ada')
             ->map(fn ($p) => [
-                'label'    => $subBarangMap[$p->idsubbarang]['label'] ?? 'Item #'.$p->idsubbarang,
-                'jumlah'   => $p->jumlah,
-                'kategori' => $kategoriMap[$p->idsubbarang] ?? 'Non Consumable',
+                'label'        => $subBarangMap[$p->idsubbarang]['label'] ?? 'Item #'.$p->idsubbarang,
+                'varian_label' => $p->idbarangvarian
+                    ? ($varianMap[$p->idbarangvarian]['label'] ?? 'Varian #'.$p->idbarangvarian)
+                    : null,
+                'jumlah'       => $p->jumlah,
+                'kategori'     => $kategoriMap[$p->idsubbarang] ?? 'Non Consumable',
             ])
             ->values();
 
@@ -276,5 +283,13 @@ class DemobilisasiController extends Controller
         $kategoriMap = BarangVarianService::buildKategoriMap($barangList, $stokKategoriByVarian);
 
         return [$subBarangMap, $kategoriMap];
+    }
+
+    private function fetchVarianMapFromApi(): Collection
+    {
+        $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
+        $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
+
+        return BarangVarianService::buildMap($barangList);
     }
 }

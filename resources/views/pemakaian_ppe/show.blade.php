@@ -54,9 +54,10 @@
                     <div class="border rounded p-3 mb-3 bg-light">
                         <div class="text-primary fw-bold mb-2">Permintaan {{ $r['no'] }}</div>
                         <div class="row">
-                            <div class="col-md-4"><span class="text-muted">Tanggal:</span> <strong>{{ $r['tanggal']->format('d M Y') }}</strong></div>
-                            <div class="col-md-4"><span class="text-muted">Diambil dari Gudang:</span> <strong>{{ $r['gudang'] }}</strong></div>
-                            <div class="col-md-4"><span class="text-muted">Catatan:</span> {{ $r['catatan'] ?: '-' }}</div>
+                            <div class="col-md-3"><span class="text-muted">Tanggal:</span> <strong>{{ $r['tanggal']->format('d M Y') }}</strong></div>
+                            <div class="col-md-3"><span class="text-muted">Varian:</span> <strong>{{ $r['varian'] ?? '-' }}</strong></div>
+                            <div class="col-md-3"><span class="text-muted">Diambil dari Gudang:</span> <strong>{{ $r['gudang'] }}</strong></div>
+                            <div class="col-md-3"><span class="text-muted">Catatan:</span> {{ $r['catatan'] ?: '-' }}</div>
                         </div>
                     </div>
                 @endforeach

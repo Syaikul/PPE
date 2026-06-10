@@ -11,7 +11,9 @@ use App\Models\Personel;
 use App\Models\PpeKeluar;
 use App\Models\Stok;
 use App\Services\BarangVarianService;
+use App\Services\PersonelStatusService;
 use App\Services\PpeOwnershipService;
+use App\Services\StokAvailabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -53,21 +55,24 @@ class MobilisasiController extends Controller
         $personelMapApi = $this->fetchPersonelMap();
         $posisiMap = $this->fetchPosisiMap();
 
-        // Personel dengan demob yang belum di-approve tidak boleh dimobilisasi lagi.
-        $pendingPersonelIds = MobilisasiPersonel::whereIn('demob_status', [
+        // Personel dengan demob yang belum di-approve (lintas gudang) tidak boleh dimobilisasi lagi.
+        $pendingIdpersonel = MobilisasiPersonel::whereIn('demob_status', [
                 MobilisasiPersonel::DEMOB_BELUM_CEK,
                 MobilisasiPersonel::DEMOB_MENUNGGU,
             ])
-            ->whereHas('personel', fn ($q) => $q->where('idgudang', $idgudang))
-            ->pluck('personel_id')
+            ->whereHas('personel')
+            ->with('personel:id,idpersonel')
+            ->get()
+            ->pluck('personel.idpersonel')
+            ->unique()
+            ->filter()
             ->all();
 
-        // Hanya personel Offshore — yang masih Onshore (mobilisasi aktif)
-        // atau yang demob-nya belum di-approve, disembunyikan.
+        // Hanya personel Offshore — status disinkronkan lintas gudang via idpersonel.
         $personelList = Personel::with('posisi')
             ->where('idgudang', $idgudang)
             ->where('status', 'Offshore')
-            ->whereNotIn('id', $pendingPersonelIds)
+            ->whereNotIn('idpersonel', $pendingIdpersonel)
             ->get()
             ->map(function ($p) use ($personelMapApi, $posisiMap) {
                 $posisiIds = $p->posisi->pluck('idposisi')->all();
@@ -110,7 +115,7 @@ class MobilisasiController extends Controller
                 $personel = Personel::where('idgudang', $idgudang)
                     ->where('status', 'Offshore')
                     ->find($personelId);
-                if (! $personel) {
+                if (! $personel || PersonelStatusService::hasPendingDemob($personel->idpersonel)) {
                     continue;
                 }
 
@@ -135,8 +140,8 @@ class MobilisasiController extends Controller
                     $usedPosisi[$idposisi] = true;
                 }
 
-                // Personel yang dimobilisasi menjadi Onshore.
-                $personel->update(['status' => 'Onshore']);
+                // Personel yang dimobilisasi menjadi Onshore di semua gudang.
+                PersonelStatusService::syncOnshore($personel->idpersonel);
             }
 
             // Mandatory selalu di-seed (berlaku untuk semua personel).
@@ -218,7 +223,10 @@ class MobilisasiController extends Controller
         // Kembalikan personel ke Offshore.
         DB::transaction(function () use ($mobilisasi) {
             foreach ($mobilisasi->personel as $mp) {
-                Personel::where('id', $mp->personel_id)->update(['status' => 'Offshore']);
+                $mp->load('personel');
+                if ($mp->personel) {
+                    PersonelStatusService::syncOffshore($mp->personel->idpersonel);
+                }
             }
             $mobilisasi->delete();
         });
@@ -319,6 +327,7 @@ class MobilisasiController extends Controller
         $personelMapApi = $this->fetchPersonelMap();
         $posisiMap = $this->fetchPosisiMap();
         [$subBarangMap, $kategoriMap] = $this->fetchSubBarangData($idgudang);
+        $varianMap = $this->fetchVarianMap();
 
         $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($id);
         $mp = MobilisasiPersonel::with('posisi')
@@ -345,15 +354,20 @@ class MobilisasiController extends Controller
         foreach ($expected as $idsub => $jumlah) {
             $isConsumable = ($kategoriMap[$idsub] ?? 'Non Consumable') === 'Consumable';
             $fromKeluar = ! $isConsumable && PpeOwnershipService::owns($idpersonel, (int) $idsub, $jumlah);
-            $row = [
-                'idsubbarang' => $idsub,
-                'label'       => $subBarangMap[$idsub]['label'] ?? 'Item #'.$idsub,
-                'jumlah'      => $jumlah,
-                'status'      => $pengecekan[$idsub]->status ?? 'tidak',
-                'catatan'     => $pengecekan[$idsub]->catatan ?? null,
-                'from_keluar' => $fromKeluar,
-            ];
-            if (($kategoriMap[$idsub] ?? 'Non Consumable') === 'Consumable') {
+            $row = $this->enrichPengecekanRow([
+                'idsubbarang'     => $idsub,
+                'label'           => $subBarangMap[$idsub]['label'] ?? 'Item #'.$idsub,
+                'jumlah'          => $jumlah,
+                'status'          => $pengecekan[$idsub]->status ?? 'tidak',
+                'catatan'         => $pengecekan[$idsub]->catatan ?? null,
+                'from_keluar'     => $fromKeluar,
+                'idbarangvarian'  => $pengecekan[$idsub]->idbarangvarian ?? null,
+                'varian_label'    => isset($pengecekan[$idsub]->idbarangvarian)
+                    ? ($varianMap[$pengecekan[$idsub]->idbarangvarian]['label'] ?? null)
+                    : null,
+            ], (int) $idsub, $jumlah, $idpersonel, $isConsumable, $subBarangMap, $varianMap, $idgudang);
+
+            if ($isConsumable) {
                 $itemsConsumable[] = $row;
             } else {
                 $itemsPpe[] = $row;
@@ -374,9 +388,10 @@ class MobilisasiController extends Controller
     public function updatePengecekan(Request $request, $idgudang, $id, $personelId)
     {
         $request->validate([
-            'idsubbarang' => 'required|integer',
-            'action'      => 'required|in:ada,tidak',
-            'catatan'     => 'nullable|string',
+            'idsubbarang'    => 'required|integer',
+            'idbarangvarian' => 'nullable|integer',
+            'action'         => 'required|in:ada,tidak',
+            'catatan'        => 'nullable|string',
         ]);
 
         $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($id);
@@ -388,40 +403,65 @@ class MobilisasiController extends Controller
 
         $idsub = (int) $request->idsubbarang;
         $idpersonel = $mp->personel->idpersonel;
-        [, $kategoriMap] = $this->fetchSubBarangData($idgudang);
+        [$subBarangMap, $kategoriMap] = $this->fetchSubBarangData($idgudang);
         $isConsumable = ($kategoriMap[$idsub] ?? 'Non Consumable') === 'Consumable';
+        $allowedVarianIds = $subBarangMap[$idsub]['varian_ids'] ?? [];
 
         // Catat barang keluar hanya saat transisi menjadi "Ada" (hindari duplikasi).
         if ($request->action === 'ada' && $pengecekan->status !== 'ada') {
-            if ($isConsumable) {
-                // Consumable: selalu dikeluarkan sejumlah kebutuhan (habis pakai).
-                $needed = $pengecekan->jumlah;
-            } else {
-                // Non consumable: hanya keluarkan kekurangan dari yang sudah dimiliki.
-                $owned = PpeOwnershipService::ownedUsableQty($idpersonel, $idsub);
-                $needed = $pengecekan->jumlah - $owned;
-            }
+            $needed = $this->calcIssueQty($idsub, $pengecekan->jumlah, $idpersonel, $isConsumable);
 
             if ($needed > 0) {
-                // Remark = alasan re-issue (catatan demob terakhir yang membuat item hilang/rusak).
-                $catatan = $isConsumable ? null : PpeOwnershipService::latestProblemNote($idpersonel, $idsub);
+                $idvarian = (int) $request->idbarangvarian;
 
-                PpeKeluar::create([
-                    'idgudang'      => $idgudang,
-                    'idpersonel'    => $idpersonel,
-                    'idsubbarang'   => $idsub,
-                    'qty'           => $needed,
-                    'tanggal'       => now()->toDateString(),
-                    'catatan'       => $catatan,
-                    'personel_id'   => $mp->personel_id,
-                    'mobilisasi_id' => $mobilisasi->id,
-                ]);
+                if (! $idvarian || ! in_array($idvarian, $allowedVarianIds, true)) {
+                    return back()->with('error', 'Pilih varian barang yang akan dikeluarkan.');
+                }
+
+                $stokCheck = StokAvailabilityService::checkVarian($idgudang, $idvarian, $needed);
+                $varianMap = $this->fetchVarianMap();
+                $varianLabel = $varianMap[$idvarian]['label'] ?? 'Varian #'.$idvarian;
+
+                if (! $stokCheck['ok']) {
+                    $msg = ! $stokCheck['in_stok']
+                        ? "Varian \"{$varianLabel}\" belum ada di stok gudang ini. Tambahkan ke Stok atau buat MR terlebih dahulu."
+                        : "Stok varian \"{$varianLabel}\" tidak cukup (tersedia: {$stokCheck['available']}, dibutuhkan: {$needed}). Tambahkan stok atau buat MR terlebih dahulu.";
+
+                    return back()->with('error', $msg);
+                }
+
+                DB::transaction(function () use ($idgudang, $idvarian, $needed, $idpersonel, $idsub, $isConsumable, $mp, $mobilisasi, $pengecekan, $request) {
+                    StokAvailabilityService::deductVarian($idgudang, $idvarian, $needed);
+
+                    $catatan = $isConsumable ? null : PpeOwnershipService::latestProblemNote($idpersonel, $idsub);
+
+                    PpeKeluar::create([
+                        'idgudang'       => $idgudang,
+                        'idpersonel'     => $idpersonel,
+                        'idsubbarang'    => $idsub,
+                        'idbarangvarian' => $idvarian,
+                        'qty'            => $needed,
+                        'tanggal'        => now()->toDateString(),
+                        'catatan'        => $catatan,
+                        'personel_id'    => $mp->personel_id,
+                        'mobilisasi_id'  => $mobilisasi->id,
+                    ]);
+
+                    $pengecekan->update([
+                        'status'          => $request->action,
+                        'idbarangvarian'  => $idvarian,
+                        'catatan'         => $request->catatan,
+                    ]);
+                });
+
+                return back()->with('success', 'Varian dikeluarkan dari stok dan status PPE diperbarui.');
             }
         }
 
         $pengecekan->update([
             'status'  => $request->action,
             'catatan' => $request->catatan,
+            ...( $request->action === 'tidak' ? ['idbarangvarian' => null] : [] ),
         ]);
 
         return back()->with('success', 'Status PPE diperbarui.');
@@ -563,6 +603,60 @@ class MobilisasiController extends Controller
             ->first(fn ($p) => strtolower($p['namaposisi'] ?? '') === 'mandatory');
 
         return isset($posisi['idposisi']) ? (int) $posisi['idposisi'] : null;
+    }
+
+    private function calcIssueQty(int $idsub, int $jumlah, int $idpersonel, bool $isConsumable): int
+    {
+        if ($isConsumable) {
+            // Consumable selalu dikeluarkan penuh saat Tambahkan (habis pakai).
+            return $jumlah;
+        }
+
+        // Non consumable: hanya keluarkan kekurangan dari yang sudah dimiliki (lintas gudang).
+        return max(0, $jumlah - PpeOwnershipService::ownedUsableQty($idpersonel, $idsub));
+    }
+
+    private function enrichPengecekanRow(array $row, int $idsub, int $jumlah, int $idpersonel, bool $isConsumable, Collection $subBarangMap, Collection $varianMap, int $idgudang): array
+    {
+        $issueQty = ($row['status'] === 'ada' || ($row['from_keluar'] ?? false))
+            ? 0
+            : $this->calcIssueQty($idsub, $jumlah, $idpersonel, $isConsumable);
+
+        $varianOptions = $this->buildVarianChoices($idgudang, $idsub, $subBarangMap, $varianMap);
+
+        $row['issue_qty']       = $issueQty;
+        $row['varian_options']  = $varianOptions;
+        $row['stok_in_table']   = collect($varianOptions)->contains(fn ($v) => $v['in_stok']);
+        $row['stok_ok']         = $issueQty <= 0
+            || collect($varianOptions)->contains(fn ($v) => $v['stok'] >= $issueQty);
+        $row['stok_available']  = collect($varianOptions)->max('stok') ?? 0;
+
+        return $row;
+    }
+
+    /** Daftar varian per sub barang beserta stok di gudang. */
+    private function buildVarianChoices(int $idgudang, int $idsub, Collection $subBarangMap, Collection $varianMap): array
+    {
+        $varianIds = $subBarangMap[$idsub]['varian_ids'] ?? [];
+
+        return collect($varianIds)->map(function ($idvarian) use ($idgudang, $varianMap) {
+            $stok = StokAvailabilityService::qtyForVarian($idgudang, (int) $idvarian);
+
+            return [
+                'idvarian' => (int) $idvarian,
+                'label'    => $varianMap[$idvarian]['label'] ?? 'Varian #'.$idvarian,
+                'stok'     => $stok,
+                'in_stok'  => StokAvailabilityService::varianInStok($idgudang, (int) $idvarian),
+            ];
+        })->values()->all();
+    }
+
+    private function fetchVarianMap(): Collection
+    {
+        $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
+        $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
+
+        return BarangVarianService::buildMap($barangList);
     }
 
     private function syncPengecekan(MobilisasiPersonel $mp, array $expected): void

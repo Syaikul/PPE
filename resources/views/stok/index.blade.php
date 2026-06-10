@@ -12,6 +12,13 @@
     </div>
 @endif
 
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
 {{-- Header: breadcrumb + tombol tambah --}}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div class="d-flex align-items-center gap-2">
@@ -114,16 +121,18 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Barang — Varian</label>
-                        <small class="text-muted d-block mb-1">Ketik keyword (nama / kode) untuk mencari barang</small>
+                        <small class="text-muted d-block mb-1">Hanya barang yang belum ada di stok. Ketik keyword (nama / kode) untuk mencari.</small>
                         <select name="idbarangvarian" id="tambahBarangSelect" class="form-select" required>
                             <option value=""></option>
-                            @foreach($varianOptions as $v)
+                            @foreach($varianOptionsTambah as $v)
                                 <option value="{{ $v['idvarian'] }}">
                                     {{ $v['label'] }}{{ $v['kode'] ? ' ('.$v['kode'].')' : '' }}
                                 </option>
                             @endforeach
                         </select>
-                        @if(empty($varianOptions))
+                        @if(empty($varianOptionsTambah))
+                            <small class="text-muted d-block mt-1">Semua barang varian sudah terdaftar di stok. Tambah qty via MR atau tombol Ubah.</small>
+                        @elseif(empty($varianOptions))
                             <small class="text-danger d-block mt-1">Tidak ada barang varian tersedia dari API.</small>
                         @endif
                     </div>

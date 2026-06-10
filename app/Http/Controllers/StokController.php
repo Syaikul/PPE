@@ -34,7 +34,13 @@ class StokController extends Controller
 
         $varianMap = collect($varianOptions)->keyBy('idvarian');
 
-        return view('stok.index', compact('idgudang', 'gudang', 'varianOptions', 'stokList', 'varianMap'));
+        $existingVarianIds = $stokList->pluck('idbarangvarian')->all();
+        $varianOptionsTambah = collect($varianOptions)
+            ->filter(fn ($v) => ! in_array($v['idvarian'], $existingVarianIds, true))
+            ->values()
+            ->all();
+
+        return view('stok.index', compact('idgudang', 'gudang', 'varianOptions', 'varianOptionsTambah', 'stokList', 'varianMap'));
     }
 
     public function store(Request $request, $idgudang)
@@ -44,6 +50,15 @@ class StokController extends Controller
             'qty'            => 'required|integer|min:1',
             'kategori'       => 'required|in:Consumable,Non Consumable',
         ]);
+
+        $existing = Stok::where('idgudang', $idgudang)
+            ->where('idbarangvarian', $request->idbarangvarian)
+            ->first();
+
+        if ($existing) {
+            return redirect()->route('gudang.stok', $idgudang)
+                ->with('error', 'Barang varian ini sudah ada di stok. Penambahan qty hanya melalui Material Request (MR) atau tombol Ubah.');
+        }
 
         Stok::create([
             'idgudang'       => $idgudang,
@@ -63,6 +78,16 @@ class StokController extends Controller
             'qty'            => 'required|integer|min:1',
             'kategori'       => 'required|in:Consumable,Non Consumable',
         ]);
+
+        $duplicate = Stok::where('idgudang', $idgudang)
+            ->where('idbarangvarian', $request->idbarangvarian)
+            ->where('id', '!=', $id)
+            ->exists();
+
+        if ($duplicate) {
+            return redirect()->route('gudang.stok', $idgudang)
+                ->with('error', 'Barang varian ini sudah ada di stok. Gunakan tombol Ubah pada baris yang sudah ada.');
+        }
 
         $stok = Stok::where('idgudang', $idgudang)->findOrFail($id);
         $stok->update([
