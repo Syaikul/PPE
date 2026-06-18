@@ -7,6 +7,7 @@ use App\Models\Mobilisasi;
 use App\Models\MobilisasiPersonel;
 use App\Services\BarangVarianService;
 use App\Services\PersonelStatusService;
+use App\Services\StokItemService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -274,15 +275,7 @@ class DemobilisasiController extends Controller
         $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
         $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
 
-        $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
-
-        $stokKategoriByVarian = \App\Models\Stok::where('idgudang', $idgudang)
-            ->get()
-            ->mapWithKeys(fn ($s) => [$s->idbarangvarian => $s->kategori ?? 'Non Consumable']);
-
-        $kategoriMap = BarangVarianService::buildKategoriMap($barangList, $stokKategoriByVarian);
-
-        return [$subBarangMap, $kategoriMap];
+        return StokItemService::buildSubBarangKategoriData((int) $idgudang, $barangList);
     }
 
     private function fetchVarianMapFromApi(): Collection

@@ -47,7 +47,14 @@
                             <td class="fw-bold">{{ $mr->nomor_mr }}</td>
                             <td>
                                 @foreach($mr->items as $item)
-                                    <div>{{ $varianMap[$item->idbarangvarian]['label'] ?? 'Barang #'.$item->idbarangvarian }}</div>
+                                    @php
+                                        $stokRef = new \App\Models\Stok([
+                                            'idsubbarang' => $item->idsubbarang,
+                                            'idbarangvarian' => $item->idbarangvarian,
+                                        ]);
+                                        $namaItem = \App\Services\StokItemService::labelForRow($stokRef, $subBarangMap, $varianMap);
+                                    @endphp
+                                    <div>{{ $namaItem }}</div>
                                 @endforeach
                             </td>
                             <td class="fw-bold">{{ $mr->tanggal_permintaan->format('j M') }}</td>
@@ -59,6 +66,10 @@
                                 </span>
                             </td>
                             <td class="text-nowrap">
+                                <a href="{{ route('gudang.permintaan.pdf', [$idgudang, $mr->id]) }}"
+                                    class="btn btn-sm btn-outline-danger" title="Download PDF">
+                                    <i class="fas fa-file-pdf"></i> PDF
+                                </a>
                                 <a href="{{ route('gudang.permintaan.show', [$idgudang, $mr->id]) }}"
                                     class="btn btn-sm btn-success">Detail</a>
                                 <button class="btn btn-sm btn-warning btn-edit-mr"
@@ -109,7 +120,7 @@
                             </thead>
                             <tbody>
                                 @foreach($stokList as $i => $stok)
-                                    @php $label = $varianMap[$stok->idbarangvarian]['label'] ?? 'Barang #'.$stok->idbarangvarian; @endphp
+                                    @php $label = \App\Services\StokItemService::labelForRow($stok, $subBarangMap, $varianMap); @endphp
                                     <tr>
                                         <td class="fw-semibold">{{ $label }}</td>
                                         <td class="text-center">{{ $stok->qty }}</td>
@@ -120,7 +131,7 @@
                                         <td class="text-center">
                                             <input type="checkbox" class="form-check-input chk-item"
                                                 data-index="{{ $i }}"
-                                                data-id="{{ $stok->idbarangvarian }}">
+                                                data-stok-id="{{ $stok->id }}">
                                         </td>
                                     </tr>
                                 @endforeach
@@ -213,8 +224,8 @@
 
             var idInput = document.createElement('input');
             idInput.type = 'hidden';
-            idInput.name = 'items[' + count + '][id]';
-            idInput.value = chk.dataset.id;
+            idInput.name = 'items[' + count + '][stok_id]';
+            idInput.value = chk.dataset.stokId;
             container.appendChild(idInput);
 
             var qtyInput = document.createElement('input');

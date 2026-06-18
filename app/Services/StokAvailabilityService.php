@@ -54,9 +54,48 @@ class StokAvailabilityService
         return self::check($idgudang, [$idvarian], $needed);
     }
 
+    public static function checkSubBarang(int $idgudang, int $idsub, array $legacyVarianIds, int $needed): array
+    {
+        if ($needed <= 0) {
+            return ['available' => self::qtyForSubBarang($idgudang, $idsub, $legacyVarianIds), 'in_stok' => true, 'ok' => true];
+        }
+
+        $available = self::qtyForSubBarang($idgudang, $idsub, $legacyVarianIds);
+        $inStok = self::subInStok($idgudang, $idsub, $legacyVarianIds);
+
+        return [
+            'available' => $available,
+            'in_stok'   => $inStok,
+            'ok'        => $inStok && $available >= $needed,
+        ];
+    }
+
     public static function deductVarian(int $idgudang, int $idvarian, int $qty): void
     {
         self::deduct($idgudang, [$idvarian], $qty);
+    }
+
+    public static function deductSubBarang(int $idgudang, int $idsub, array $legacyVarianIds, int $qty): void
+    {
+        if ($qty <= 0) {
+            return;
+        }
+
+        $subRow = Stok::where('idgudang', $idgudang)
+            ->where('idsubbarang', $idsub)
+            ->whereNull('idbarangvarian')
+            ->where('qty', '>', 0)
+            ->first();
+
+        if ($subRow) {
+            $take = min($subRow->qty, $qty);
+            $subRow->decrement('qty', $take);
+            $qty -= $take;
+        }
+
+        if ($qty > 0 && ! empty($legacyVarianIds)) {
+            self::deduct($idgudang, $legacyVarianIds, $qty);
+        }
     }
 
     public static function qtyForVarian(int $idgudang, int $idvarian): int
@@ -66,11 +105,37 @@ class StokAvailabilityService
             ->value('qty') ?? 0;
     }
 
+    public static function qtyForSubBarang(int $idgudang, int $idsub, array $legacyVarianIds = []): int
+    {
+        $subQty = (int) Stok::where('idgudang', $idgudang)
+            ->where('idsubbarang', $idsub)
+            ->whereNull('idbarangvarian')
+            ->value('qty') ?? 0;
+
+        if ($subQty > 0) {
+            return $subQty;
+        }
+
+        return self::availableQty($idgudang, $legacyVarianIds);
+    }
+
     public static function varianInStok(int $idgudang, int $idvarian): bool
     {
         return Stok::where('idgudang', $idgudang)
             ->where('idbarangvarian', $idvarian)
             ->exists();
+    }
+
+    public static function subInStok(int $idgudang, int $idsub, array $legacyVarianIds = []): bool
+    {
+        if (Stok::where('idgudang', $idgudang)
+            ->where('idsubbarang', $idsub)
+            ->whereNull('idbarangvarian')
+            ->exists()) {
+            return true;
+        }
+
+        return self::inStok($idgudang, $legacyVarianIds);
     }
 
     /** Kurangi stok gudang saat barang keluar (FIFO per baris stok). */

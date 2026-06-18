@@ -3,7 +3,7 @@
 
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Workshop Inventory</title>
+    <title>{{ $documentTitle ?? 'Inventory' }}</title>
     <meta content="width=device-width, initial-scale=1.0, shrink-to-fit=no" name="viewport" />
     <link rel="icon" href="{{ asset('template/assets/img/kaiadmin/logoicon.png') }}" type="image/x-icon">
 

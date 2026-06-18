@@ -18,9 +18,12 @@
     </div>
 @endif
 
-<div class="mb-3">
+<div class="mb-3 d-flex justify-content-between align-items-center">
     <a href="{{ route('gudang.permintaan', $idgudang) }}" class="btn btn-sm btn-outline-secondary">
         <i class="fas fa-arrow-left me-1"></i> Kembali
+    </a>
+    <a href="{{ route('gudang.permintaan.pdf', [$idgudang, $permintaan->id]) }}" class="btn btn-sm btn-outline-danger">
+        <i class="fas fa-file-pdf me-1"></i> Download PDF
     </a>
 </div>
 
@@ -56,7 +59,11 @@
                 <tbody>
                     @foreach($permintaan->items as $item)
                         @php
-                            $nama = $varianMap[$item->idbarangvarian]['label'] ?? 'Barang #'.$item->idbarangvarian;
+                            $stokRef = new \App\Models\Stok([
+                                'idsubbarang' => $item->idsubbarang,
+                                'idbarangvarian' => $item->idbarangvarian,
+                            ]);
+                            $nama = \App\Services\StokItemService::labelForRow($stokRef, $subBarangMap, $varianMap);
                             $itemSt = $item->status;
                         @endphp
                         <tr class="item-row" style="cursor:pointer;" data-bs-toggle="collapse"

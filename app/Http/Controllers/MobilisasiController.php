@@ -14,6 +14,7 @@ use App\Services\BarangVarianService;
 use App\Services\PersonelStatusService;
 use App\Services\PpeOwnershipService;
 use App\Services\StokAvailabilityService;
+use App\Services\StokItemService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -364,7 +365,9 @@ class MobilisasiController extends Controller
                 'idbarangvarian'  => $pengecekan[$idsub]->idbarangvarian ?? null,
                 'varian_label'    => isset($pengecekan[$idsub]->idbarangvarian)
                     ? ($varianMap[$pengecekan[$idsub]->idbarangvarian]['label'] ?? null)
-                    : null,
+                    : ((($pengecekan[$idsub]->status ?? '') === 'ada')
+                        ? ($subBarangMap[$idsub]['label'] ?? null)
+                        : null),
             ], (int) $idsub, $jumlah, $idpersonel, $isConsumable, $subBarangMap, $varianMap, $idgudang);
 
             if ($isConsumable) {
@@ -406,32 +409,73 @@ class MobilisasiController extends Controller
         [$subBarangMap, $kategoriMap] = $this->fetchSubBarangData($idgudang);
         $isConsumable = ($kategoriMap[$idsub] ?? 'Non Consumable') === 'Consumable';
         $allowedVarianIds = $subBarangMap[$idsub]['varian_ids'] ?? [];
+        $legacyVarianIds = $subBarangMap[$idsub]['all_varian_ids'] ?? [];
+        $hasRealVariants = $subBarangMap[$idsub]['has_real_variants'] ?? ! empty($allowedVarianIds);
 
         // Catat barang keluar hanya saat transisi menjadi "Ada" (hindari duplikasi).
         if ($request->action === 'ada' && $pengecekan->status !== 'ada') {
             $needed = $this->calcIssueQty($idsub, $pengecekan->jumlah, $idpersonel, $isConsumable);
 
             if ($needed > 0) {
-                $idvarian = (int) $request->idbarangvarian;
+                if ($hasRealVariants) {
+                    $idvarian = (int) $request->idbarangvarian;
 
-                if (! $idvarian || ! in_array($idvarian, $allowedVarianIds, true)) {
-                    return back()->with('error', 'Pilih varian barang yang akan dikeluarkan.');
+                    if (! $idvarian || ! in_array($idvarian, $allowedVarianIds, true)) {
+                        return back()->with('error', 'Pilih varian barang yang akan dikeluarkan.');
+                    }
+
+                    $stokCheck = StokAvailabilityService::checkVarian($idgudang, $idvarian, $needed);
+                    $varianMap = $this->fetchVarianMap();
+                    $varianLabel = $varianMap[$idvarian]['label'] ?? 'Varian #'.$idvarian;
+
+                    if (! $stokCheck['ok']) {
+                        $msg = ! $stokCheck['in_stok']
+                            ? "Varian \"{$varianLabel}\" belum ada di stok gudang ini. Tambahkan ke Stok atau buat MR terlebih dahulu."
+                            : "Stok varian \"{$varianLabel}\" tidak cukup (tersedia: {$stokCheck['available']}, dibutuhkan: {$needed}). Tambahkan stok atau buat MR terlebih dahulu.";
+
+                        return back()->with('error', $msg);
+                    }
+
+                    DB::transaction(function () use ($idgudang, $idvarian, $needed, $idpersonel, $idsub, $isConsumable, $mp, $mobilisasi, $pengecekan, $request) {
+                        StokAvailabilityService::deductVarian($idgudang, $idvarian, $needed);
+
+                        $catatan = $isConsumable ? null : PpeOwnershipService::latestProblemNote($idpersonel, $idsub);
+
+                        PpeKeluar::create([
+                            'idgudang'       => $idgudang,
+                            'idpersonel'     => $idpersonel,
+                            'idsubbarang'    => $idsub,
+                            'idbarangvarian' => $idvarian,
+                            'qty'            => $needed,
+                            'tanggal'        => now()->toDateString(),
+                            'catatan'        => $catatan,
+                            'personel_id'    => $mp->personel_id,
+                            'mobilisasi_id'  => $mobilisasi->id,
+                        ]);
+
+                        $pengecekan->update([
+                            'status'         => $request->action,
+                            'idbarangvarian' => $idvarian,
+                            'catatan'        => $request->catatan,
+                        ]);
+                    });
+
+                    return back()->with('success', 'Varian dikeluarkan dari stok dan status PPE diperbarui.');
                 }
 
-                $stokCheck = StokAvailabilityService::checkVarian($idgudang, $idvarian, $needed);
-                $varianMap = $this->fetchVarianMap();
-                $varianLabel = $varianMap[$idvarian]['label'] ?? 'Varian #'.$idvarian;
+                $subLabel = $subBarangMap[$idsub]['label'] ?? 'Sub Barang #'.$idsub;
+                $stokCheck = StokAvailabilityService::checkSubBarang($idgudang, $idsub, $legacyVarianIds, $needed);
 
                 if (! $stokCheck['ok']) {
                     $msg = ! $stokCheck['in_stok']
-                        ? "Varian \"{$varianLabel}\" belum ada di stok gudang ini. Tambahkan ke Stok atau buat MR terlebih dahulu."
-                        : "Stok varian \"{$varianLabel}\" tidak cukup (tersedia: {$stokCheck['available']}, dibutuhkan: {$needed}). Tambahkan stok atau buat MR terlebih dahulu.";
+                        ? "Barang \"{$subLabel}\" belum ada di stok gudang ini. Tambahkan ke Stok atau buat MR terlebih dahulu."
+                        : "Stok \"{$subLabel}\" tidak cukup (tersedia: {$stokCheck['available']}, dibutuhkan: {$needed}). Tambahkan stok atau buat MR terlebih dahulu.";
 
                     return back()->with('error', $msg);
                 }
 
-                DB::transaction(function () use ($idgudang, $idvarian, $needed, $idpersonel, $idsub, $isConsumable, $mp, $mobilisasi, $pengecekan, $request) {
-                    StokAvailabilityService::deductVarian($idgudang, $idvarian, $needed);
+                DB::transaction(function () use ($idgudang, $idsub, $legacyVarianIds, $needed, $idpersonel, $isConsumable, $mp, $mobilisasi, $pengecekan, $request) {
+                    StokAvailabilityService::deductSubBarang($idgudang, $idsub, $legacyVarianIds, $needed);
 
                     $catatan = $isConsumable ? null : PpeOwnershipService::latestProblemNote($idpersonel, $idsub);
 
@@ -439,7 +483,7 @@ class MobilisasiController extends Controller
                         'idgudang'       => $idgudang,
                         'idpersonel'     => $idpersonel,
                         'idsubbarang'    => $idsub,
-                        'idbarangvarian' => $idvarian,
+                        'idbarangvarian' => null,
                         'qty'            => $needed,
                         'tanggal'        => now()->toDateString(),
                         'catatan'        => $catatan,
@@ -448,13 +492,13 @@ class MobilisasiController extends Controller
                     ]);
 
                     $pengecekan->update([
-                        'status'          => $request->action,
-                        'idbarangvarian'  => $idvarian,
-                        'catatan'         => $request->catatan,
+                        'status'         => $request->action,
+                        'idbarangvarian' => null,
+                        'catatan'        => $request->catatan,
                     ]);
                 });
 
-                return back()->with('success', 'Varian dikeluarkan dari stok dan status PPE diperbarui.');
+                return back()->with('success', 'Barang dikeluarkan dari stok dan status PPE diperbarui.');
             }
         }
 
@@ -637,16 +681,35 @@ class MobilisasiController extends Controller
     /** Daftar varian per sub barang beserta stok di gudang. */
     private function buildVarianChoices(int $idgudang, int $idsub, Collection $subBarangMap, Collection $varianMap): array
     {
-        $varianIds = $subBarangMap[$idsub]['varian_ids'] ?? [];
+        $sub = $subBarangMap[$idsub] ?? null;
+        if (! $sub) {
+            return [];
+        }
+
+        if (! ($sub['has_real_variants'] ?? false)) {
+            $legacyIds = $sub['all_varian_ids'] ?? [];
+            $stok = StokAvailabilityService::qtyForSubBarang($idgudang, $idsub, $legacyIds);
+
+            return [[
+                'idvarian'     => null,
+                'is_sub_level' => true,
+                'label'        => $sub['label'] ?? 'Sub Barang #'.$idsub,
+                'stok'         => $stok,
+                'in_stok'      => StokAvailabilityService::subInStok($idgudang, $idsub, $legacyIds),
+            ]];
+        }
+
+        $varianIds = $sub['varian_ids'] ?? [];
 
         return collect($varianIds)->map(function ($idvarian) use ($idgudang, $varianMap) {
             $stok = StokAvailabilityService::qtyForVarian($idgudang, (int) $idvarian);
 
             return [
-                'idvarian' => (int) $idvarian,
-                'label'    => $varianMap[$idvarian]['label'] ?? 'Varian #'.$idvarian,
-                'stok'     => $stok,
-                'in_stok'  => StokAvailabilityService::varianInStok($idgudang, (int) $idvarian),
+                'idvarian'     => (int) $idvarian,
+                'is_sub_level' => false,
+                'label'        => $varianMap[$idvarian]['label'] ?? 'Varian #'.$idvarian,
+                'stok'         => $stok,
+                'in_stok'      => StokAvailabilityService::varianInStok($idgudang, (int) $idvarian),
             ];
         })->values()->all();
     }
@@ -717,14 +780,6 @@ class MobilisasiController extends Controller
         $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
         $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
 
-        $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
-
-        $stokKategoriByVarian = Stok::where('idgudang', $idgudang)
-            ->get()
-            ->mapWithKeys(fn ($s) => [$s->idbarangvarian => $s->kategori ?? 'Non Consumable']);
-
-        $kategoriMap = BarangVarianService::buildKategoriMap($barangList, $stokKategoriByVarian);
-
-        return [$subBarangMap, $kategoriMap];
+        return StokItemService::buildSubBarangKategoriData((int) $idgudang, $barangList);
     }
 }

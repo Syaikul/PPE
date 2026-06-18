@@ -21,8 +21,12 @@ Route::middleware('auth')->group(function () {
     Route::put('/gudang/{idgudang}/personel/{id}', [App\Http\Controllers\PersonelController::class, 'update'])->name('gudang.personel.update');
     Route::delete('/gudang/{idgudang}/personel/{id}', [App\Http\Controllers\PersonelController::class, 'destroy'])->name('gudang.personel.destroy');
 
+    Route::get('/gudang/{idgudang}/permintaan/buat-tabel', [App\Http\Controllers\PermintaanPpeController::class, 'create'])->name('gudang.permintaan-ppe.create');
+    Route::post('/gudang/{idgudang}/permintaan/buat-tabel/export', [App\Http\Controllers\PermintaanPpeController::class, 'export'])->name('gudang.permintaan-ppe.export');
+
     Route::get('/gudang/{idgudang}/permintaan', [App\Http\Controllers\PermintaanController::class, 'index'])->name('gudang.permintaan');
     Route::post('/gudang/{idgudang}/permintaan', [App\Http\Controllers\PermintaanController::class, 'store'])->name('gudang.permintaan.store');
+    Route::get('/gudang/{idgudang}/permintaan/{id}/pdf', [App\Http\Controllers\PermintaanController::class, 'downloadPdf'])->name('gudang.permintaan.pdf');
     Route::get('/gudang/{idgudang}/permintaan/{id}', [App\Http\Controllers\PermintaanController::class, 'show'])->name('gudang.permintaan.show');
     Route::put('/gudang/{idgudang}/permintaan/{id}', [App\Http\Controllers\PermintaanController::class, 'update'])->name('gudang.permintaan.update');
     Route::delete('/gudang/{idgudang}/permintaan/{id}', [App\Http\Controllers\PermintaanController::class, 'destroy'])->name('gudang.permintaan.destroy');

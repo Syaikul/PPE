@@ -12,6 +12,7 @@ class PermintaanItem extends Model
 
     protected $fillable = [
         'permintaan_id',
+        'idsubbarang',
         'idbarangvarian',
         'qty_diminta',
     ];

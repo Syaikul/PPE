@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Stok;
 use App\Services\BarangVarianService;
+use App\Services\StokItemService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -16,53 +17,63 @@ class StokController extends Controller
 
     public function index($idgudang)
     {
-        // Simpan gudang aktif ke session agar sidebar bisa pakai
         session(['idgudang' => $idgudang]);
 
-        // Ambil info gudang dari API
         $gudangResponse = Http::get('http://127.0.0.1:8000/api/gudang');
         $gudangList = $gudangResponse->successful() ? ($gudangResponse->json('data') ?? []) : [];
         $gudang = collect($gudangList)->firstWhere('idgudang', (int) $idgudang);
 
-        // Ambil daftar barang + varian dari API untuk dropdown
         $barangResponse = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
         $barangList = $barangResponse->successful() ? ($barangResponse->json('data') ?? []) : [];
-        $varianOptions = BarangVarianService::buildOptions($barangList);
+        $stokOptions = BarangVarianService::buildStokOptions($barangList);
+        $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
+        $varianMap = BarangVarianService::buildMap($barangList);
 
-        // Tabel stok hanya menampilkan data yang sudah diinput user.
         $stokList = Stok::where('idgudang', $idgudang)->latest()->get();
 
-        $varianMap = collect($varianOptions)->keyBy('idvarian');
-
-        $existingVarianIds = $stokList->pluck('idbarangvarian')->all();
-        $varianOptionsTambah = collect($varianOptions)
-            ->filter(fn ($v) => ! in_array($v['idvarian'], $existingVarianIds, true))
+        $existingKeys = $stokList->map(fn ($s) => StokItemService::itemKey($s->idsubbarang, $s->idbarangvarian))->all();
+        $stokOptionsTambah = collect($stokOptions)
+            ->filter(fn ($opt) => ! in_array($opt['key'], $existingKeys, true))
             ->values()
             ->all();
 
-        return view('stok.index', compact('idgudang', 'gudang', 'varianOptions', 'varianOptionsTambah', 'stokList', 'varianMap'));
+        return view('stok.index', compact(
+            'idgudang', 'gudang', 'stokOptions', 'stokOptionsTambah', 'stokList', 'subBarangMap', 'varianMap'
+        ));
     }
 
     public function store(Request $request, $idgudang)
     {
         $request->validate([
-            'idbarangvarian' => 'required|integer',
-            'qty'            => 'required|integer|min:1',
-            'kategori'       => 'required|in:Consumable,Non Consumable',
+            'stok_item' => 'required|string',
+            'qty'       => 'required|integer|min:1',
+            'kategori'  => 'required|in:Consumable,Non Consumable',
         ]);
 
-        $existing = Stok::where('idgudang', $idgudang)
-            ->where('idbarangvarian', $request->idbarangvarian)
-            ->first();
+        $parsed = StokItemService::parseItemKey($request->stok_item);
+        $idsubbarang = $parsed['idsubbarang'];
+        $idbarangvarian = $parsed['idbarangvarian'];
 
-        if ($existing) {
+        if ($idbarangvarian) {
+            $barangResponse = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
+            $barangList = $barangResponse->successful() ? ($barangResponse->json('data') ?? []) : [];
+            foreach (BarangVarianService::buildStokOptions($barangList) as $opt) {
+                if ($opt['type'] === 'varian' && (int) $opt['idvarian'] === $idbarangvarian) {
+                    $idsubbarang = $opt['idsubbarang'];
+                    break;
+                }
+            }
+        }
+
+        if (StokItemService::existsInGudang((int) $idgudang, $idsubbarang, $idbarangvarian)) {
             return redirect()->route('gudang.stok', $idgudang)
-                ->with('error', 'Barang varian ini sudah ada di stok. Penambahan qty hanya melalui Material Request (MR) atau tombol Ubah.');
+                ->with('error', 'Barang ini sudah ada di stok. Penambahan qty hanya melalui Material Request (MR) atau tombol Ubah.');
         }
 
         Stok::create([
             'idgudang'       => $idgudang,
-            'idbarangvarian' => $request->idbarangvarian,
+            'idsubbarang'    => $idsubbarang,
+            'idbarangvarian' => $idbarangvarian,
             'qty'            => $request->qty,
             'kategori'       => $request->kategori,
         ]);
@@ -74,26 +85,14 @@ class StokController extends Controller
     public function update(Request $request, $idgudang, $id)
     {
         $request->validate([
-            'idbarangvarian' => 'required|integer',
-            'qty'            => 'required|integer|min:1',
-            'kategori'       => 'required|in:Consumable,Non Consumable',
+            'qty'      => 'required|integer|min:1',
+            'kategori' => 'required|in:Consumable,Non Consumable',
         ]);
-
-        $duplicate = Stok::where('idgudang', $idgudang)
-            ->where('idbarangvarian', $request->idbarangvarian)
-            ->where('id', '!=', $id)
-            ->exists();
-
-        if ($duplicate) {
-            return redirect()->route('gudang.stok', $idgudang)
-                ->with('error', 'Barang varian ini sudah ada di stok. Gunakan tombol Ubah pada baris yang sudah ada.');
-        }
 
         $stok = Stok::where('idgudang', $idgudang)->findOrFail($id);
         $stok->update([
-            'idbarangvarian' => $request->idbarangvarian,
-            'qty'            => $request->qty,
-            'kategori'       => $request->kategori,
+            'qty'      => $request->qty,
+            'kategori' => $request->kategori,
         ]);
 
         return redirect()->route('gudang.stok', $idgudang)

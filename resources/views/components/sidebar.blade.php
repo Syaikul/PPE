@@ -111,7 +111,7 @@
                     <div class="collapse" id="permintaanppe">
                         <ul class="nav nav-collapse">
                             <li>
-                                <a href="">
+                                <a href="{{ session('idgudang') ? route('gudang.permintaan-ppe.create', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Buat Tabel Permintaan</span>
                                 </a>
                             </li>

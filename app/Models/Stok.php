@@ -13,8 +13,14 @@ class Stok extends Model
 
     protected $fillable = [
         'idgudang',
+        'idsubbarang',
         'idbarangvarian',
         'qty',
         'kategori',
     ];
+
+    public function isSubLevel(): bool
+    {
+        return $this->idsubbarang && ! $this->idbarangvarian;
+    }
 }

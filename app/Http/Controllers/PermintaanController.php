@@ -7,6 +7,8 @@ use App\Models\PermintaanItem;
 use App\Models\PermintaanKedatangan;
 use App\Models\Stok;
 use App\Services\BarangVarianService;
+use App\Services\MrPdfExportService;
+use App\Services\StokItemService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -22,7 +24,9 @@ class PermintaanController extends Controller
         session(['idgudang' => $idgudang]);
 
         $gudang = $this->fetchGudang($idgudang);
-        $varianMap = $this->fetchVarianMap();
+        $barangList = $this->fetchBarangList();
+        $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
+        $varianMap = BarangVarianService::buildMap($barangList);
 
         $permintaanList = Permintaan::with(['items.kedatangan'])
             ->where('idgudang', $idgudang)
@@ -31,16 +35,16 @@ class PermintaanController extends Controller
 
         $stokList = Stok::where('idgudang', $idgudang)->get();
 
-        return view('permintaan.index', compact('idgudang', 'gudang', 'varianMap', 'permintaanList', 'stokList'));
+        return view('permintaan.index', compact('idgudang', 'gudang', 'varianMap', 'subBarangMap', 'permintaanList', 'stokList'));
     }
 
     public function store(Request $request, $idgudang)
     {
         $request->validate([
-            'nomor_mr'       => 'required|string|max:255',
-            'items'          => 'required|array|min:1',
-            'items.*.id'     => 'required|integer',
-            'items.*.qty'    => 'required|integer|min:1',
+            'nomor_mr'          => 'required|string|max:255',
+            'items'             => 'required|array|min:1',
+            'items.*.stok_id'   => 'required|integer',
+            'items.*.qty'       => 'required|integer|min:1',
         ]);
 
         $permintaan = Permintaan::create([
@@ -50,10 +54,13 @@ class PermintaanController extends Controller
         ]);
 
         foreach ($request->items as $item) {
+            $stok = Stok::where('idgudang', $idgudang)->findOrFail($item['stok_id']);
+
             PermintaanItem::create([
-                'permintaan_id'   => $permintaan->id,
-                'idbarangvarian'  => $item['id'],
-                'qty_diminta'     => $item['qty'],
+                'permintaan_id'  => $permintaan->id,
+                'idsubbarang'    => $stok->idsubbarang,
+                'idbarangvarian' => $stok->idbarangvarian,
+                'qty_diminta'    => $item['qty'],
             ]);
         }
 
@@ -66,13 +73,15 @@ class PermintaanController extends Controller
         session(['idgudang' => $idgudang]);
 
         $gudang = $this->fetchGudang($idgudang);
-        $varianMap = $this->fetchVarianMap();
+        $barangList = $this->fetchBarangList();
+        $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
+        $varianMap = BarangVarianService::buildMap($barangList);
 
         $permintaan = Permintaan::with(['items.kedatangan'])
             ->where('idgudang', $idgudang)
             ->findOrFail($id);
 
-        return view('permintaan.show', compact('idgudang', 'gudang', 'varianMap', 'permintaan'));
+        return view('permintaan.show', compact('idgudang', 'gudang', 'varianMap', 'subBarangMap', 'permintaan'));
     }
 
     public function update(Request $request, $idgudang, $id)
@@ -126,6 +135,56 @@ class PermintaanController extends Controller
             ->with('success', 'Data kedatangan berhasil ditambahkan.');
     }
 
+    public function downloadPdf($idgudang, $id, MrPdfExportService $pdfService)
+    {
+        session(['idgudang' => $idgudang]);
+
+        $gudang = $this->fetchGudang($idgudang);
+        $barangList = $this->fetchBarangList();
+        $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
+        $varianMap = BarangVarianService::buildMap($barangList);
+
+        $permintaan = Permintaan::with('items')
+            ->where('idgudang', $idgudang)
+            ->findOrFail($id);
+
+        $pdfItems = $this->buildPdfItems($permintaan, (int) $idgudang, $subBarangMap, $varianMap);
+        $tanggalFormatted = $permintaan->tanggal_permintaan->format('d/m/Y');
+
+        return $pdfService->download($gudang ?? [], $permintaan->nomor_mr, $tanggalFormatted, $pdfItems);
+    }
+
+    /** @return array<int, array{label: string, jumlah: int, satuan: string, sisa_stok: int, kategori: string}> */
+    private function buildPdfItems(Permintaan $permintaan, int $idgudang, $subBarangMap, $varianMap): array
+    {
+        $items = [];
+
+        foreach ($permintaan->items as $item) {
+            $stokQuery = Stok::where('idgudang', $idgudang);
+            if ($item->idbarangvarian) {
+                $stokQuery->where('idbarangvarian', $item->idbarangvarian);
+            } else {
+                $stokQuery->where('idsubbarang', $item->idsubbarang)->whereNull('idbarangvarian');
+            }
+            $stok = $stokQuery->first();
+
+            $labelRef = $stok ?? new Stok([
+                'idsubbarang'    => $item->idsubbarang,
+                'idbarangvarian' => $item->idbarangvarian,
+            ]);
+
+            $items[] = [
+                'label'     => StokItemService::labelForRow($labelRef, $subBarangMap, $varianMap),
+                'jumlah'    => (int) $item->qty_diminta,
+                'satuan'    => 'Pcs',
+                'sisa_stok' => (int) ($stok->qty ?? 0),
+                'kategori'  => $stok->kategori ?? Stok::KATEGORI_NON_CONSUMABLE,
+            ];
+        }
+
+        return $items;
+    }
+
     private function fetchGudang($idgudang): ?array
     {
         $response = Http::get('http://127.0.0.1:8000/api/gudang');
@@ -134,11 +193,15 @@ class PermintaanController extends Controller
         return collect($list)->firstWhere('idgudang', (int) $idgudang);
     }
 
-    private function fetchVarianMap(): \Illuminate\Support\Collection
+    private function fetchBarangList(): array
     {
         $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
-        $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
 
-        return BarangVarianService::buildMap($barangList);
+        return $response->successful() ? ($response->json('data') ?? []) : [];
+    }
+
+    private function fetchVarianMap(): \Illuminate\Support\Collection
+    {
+        return BarangVarianService::buildMap($this->fetchBarangList());
     }
 }

@@ -129,7 +129,9 @@
                                             @csrf @method('PUT')
                                             <input type="hidden" name="idsubbarang" value="{{ $item['idsubbarang'] }}">
                                             <input type="hidden" name="action" value="ada">
-                                            <input type="hidden" name="idbarangvarian" value="{{ $item['varian_options'][0]['idvarian'] }}">
+                                            @if(empty($item['varian_options'][0]['is_sub_level']))
+                                                <input type="hidden" name="idbarangvarian" value="{{ $item['varian_options'][0]['idvarian'] }}">
+                                            @endif
                                             <button type="submit" {{ $mp->submitted_at ? 'disabled' : '' }}
                                                 class="btn btn-sm btn-outline-success px-3">Tambahkan +</button>
                                         </form>

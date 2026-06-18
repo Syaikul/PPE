@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Personel;
 use App\Models\PpeKeluar;
 use App\Services\BarangVarianService;
+use App\Services\StokItemService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 
@@ -139,15 +140,7 @@ class PemakaianPpeController extends Controller
         $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
         $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
 
-        $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
-
-        $stokKategoriByVarian = \App\Models\Stok::where('idgudang', $idgudang)
-            ->get()
-            ->mapWithKeys(fn ($s) => [$s->idbarangvarian => $s->kategori ?? 'Non Consumable']);
-
-        $kategoriMap = BarangVarianService::buildKategoriMap($barangList, $stokKategoriByVarian);
-
-        return [$subBarangMap, $kategoriMap];
+        return StokItemService::buildSubBarangKategoriData((int) $idgudang, $barangList);
     }
 
     private function fetchVarianMap(): Collection
