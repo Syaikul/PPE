@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PpeKeluar;
 use App\Services\BarangVarianService;
-use Illuminate\Support\Facades\Http;
+use App\Services\MasterApiService;
 
 class PpeKeluarController extends Controller
 {
@@ -19,8 +19,9 @@ class PpeKeluarController extends Controller
 
         $gudang = $this->fetchGudang($idgudang);
         $personelMapApi = $this->fetchPersonelMap();
-        $subBarangMap = $this->fetchSubBarangMap();
-        $varianMap = $this->fetchVarianMap();
+        $barangList = MasterApiService::barangWithVarian();
+        $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
+        $varianMap = BarangVarianService::buildMap($barangList);
 
         $keluarList = PpeKeluar::with('personel')
             ->where('idgudang', $idgudang)
@@ -33,33 +34,11 @@ class PpeKeluarController extends Controller
 
     private function fetchGudang($idgudang): ?array
     {
-        $response = Http::get('http://127.0.0.1:8000/api/gudang');
-        $list = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return collect($list)->firstWhere('idgudang', (int) $idgudang);
+        return MasterApiService::gudangById((int) $idgudang);
     }
 
     private function fetchPersonelMap(): \Illuminate\Support\Collection
     {
-        $response = Http::get('http://127.0.0.1:8000/api/personel');
-        $list = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return collect($list)->keyBy('idpersonel');
-    }
-
-    private function fetchSubBarangMap(): \Illuminate\Support\Collection
-    {
-        $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
-        $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return BarangVarianService::buildSubBarangMap($barangList);
-    }
-
-    private function fetchVarianMap(): \Illuminate\Support\Collection
-    {
-        $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
-        $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return BarangVarianService::buildMap($barangList);
+        return collect(MasterApiService::personel())->keyBy('idpersonel');
     }
 }

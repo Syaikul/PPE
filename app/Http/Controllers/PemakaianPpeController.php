@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Personel;
 use App\Models\PpeKeluar;
 use App\Services\BarangVarianService;
+use App\Services\MasterApiService;
 use App\Services\StokItemService;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Http;
 
 class PemakaianPpeController extends Controller
 {
@@ -112,42 +112,27 @@ class PemakaianPpeController extends Controller
 
     private function fetchGudangMap(): Collection
     {
-        $response = Http::get('http://127.0.0.1:8000/api/gudang');
-        $list = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return collect($list)->keyBy('idgudang');
+        return collect(MasterApiService::gudang())->keyBy('idgudang');
     }
 
     private function fetchPersonelMap(): Collection
     {
-        $response = Http::get('http://127.0.0.1:8000/api/personel');
-        $list = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return collect($list)->keyBy('idpersonel');
+        return collect(MasterApiService::personel())->keyBy('idpersonel');
     }
 
     private function fetchPosisiMap(): Collection
     {
-        $response = Http::get('http://127.0.0.1:8000/api/posisi');
-        $list = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return collect($list)->keyBy('idposisi');
+        return collect(MasterApiService::posisi())->keyBy('idposisi');
     }
 
     /** @return array{0: Collection, 1: Collection} [subBarangMap, kategoriMap] */
     private function fetchSubBarangData($idgudang): array
     {
-        $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
-        $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return StokItemService::buildSubBarangKategoriData((int) $idgudang, $barangList);
+        return StokItemService::buildSubBarangKategoriData((int) $idgudang, MasterApiService::barangWithVarian());
     }
 
     private function fetchVarianMap(): Collection
     {
-        $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
-        $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return BarangVarianService::buildMap($barangList);
+        return BarangVarianService::buildMap(MasterApiService::barangWithVarian());
     }
 }

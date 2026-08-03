@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\DemobPengecekan;
 use App\Models\Mobilisasi;
 use App\Models\MobilisasiPersonel;
+use App\Models\SpareBarangPemakaian;
 use App\Services\BarangVarianService;
+use App\Services\MasterApiService;
+use App\Services\SpareBarangService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 
 class ApprovalDemobController extends Controller
 {
@@ -56,7 +58,75 @@ class ApprovalDemobController extends Controller
                 ];
             });
 
-        return view('approval_demob.index', compact('idgudang', 'gudang', 'list'));
+        $spareList = $this->pendingSpareList($idgudang, $personelMapApi);
+
+        return view('approval_demob.index', compact('idgudang', 'gudang', 'list', 'spareList'));
+    }
+
+    /** Pengajuan pemakaian spare barang yang menunggu approval. */
+    private function pendingSpareList($idgudang, Collection $personelMapApi): Collection
+    {
+        $barangList = MasterApiService::barangWithVarian();
+        $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
+        $varianMap = BarangVarianService::buildMap($barangList);
+
+        return SpareBarangPemakaian::with(['item.spareBarang', 'personel'])
+            ->where('status', SpareBarangPemakaian::STATUS_MENUNGGU)
+            ->whereHas('item.spareBarang', fn ($q) => $q->where('idgudang', $idgudang))
+            ->latest('id')
+            ->get()
+            ->map(fn ($p) => [
+                'pemakaian' => $p,
+                'no_sr'     => $p->item->spareBarang->no_sr,
+                'item_lbl'  => SpareBarangService::labelForItem(
+                    $p->item->idsubbarang,
+                    $p->item->idbarangvarian,
+                    $subBarangMap,
+                    $varianMap
+                ),
+                'nama'      => $p->personel
+                    ? ($personelMapApi[$p->personel->idpersonel]['namapersonel'] ?? 'Personel #'.$p->personel_id)
+                    : '-',
+                'sisa'      => $p->item->sisa,
+            ]);
+    }
+
+    public function approveSpare(Request $request, $idgudang, $pemakaianId)
+    {
+        $request->validate(['catatan' => 'nullable|string']);
+
+        $pemakaian = $this->findPendingSpare($idgudang, $pemakaianId);
+
+        try {
+            SpareBarangService::approvePemakaian($pemakaian, $request->catatan);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Pemakaian spare disetujui. Sisa spare berkurang dan tercatat di PPE Keluar.');
+    }
+
+    public function rejectSpare(Request $request, $idgudang, $pemakaianId)
+    {
+        $request->validate(['catatan' => 'nullable|string']);
+
+        $pemakaian = $this->findPendingSpare($idgudang, $pemakaianId);
+
+        try {
+            SpareBarangService::rejectPemakaian($pemakaian, $request->catatan);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Pemakaian spare ditolak.');
+    }
+
+    private function findPendingSpare($idgudang, $pemakaianId): SpareBarangPemakaian
+    {
+        return SpareBarangPemakaian::with(['item.spareBarang', 'personel'])
+            ->where('status', SpareBarangPemakaian::STATUS_MENUNGGU)
+            ->whereHas('item.spareBarang', fn ($q) => $q->where('idgudang', $idgudang))
+            ->findOrFail($pemakaianId);
     }
 
     public function approve(Request $request, $idgudang, $personelId)
@@ -121,33 +191,21 @@ class ApprovalDemobController extends Controller
 
     private function fetchGudang($idgudang): ?array
     {
-        $response = Http::get('http://127.0.0.1:8000/api/gudang');
-        $list = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return collect($list)->firstWhere('idgudang', (int) $idgudang);
+        return MasterApiService::gudangById((int) $idgudang);
     }
 
     private function fetchPersonelMap(): Collection
     {
-        $response = Http::get('http://127.0.0.1:8000/api/personel');
-        $list = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return collect($list)->keyBy('idpersonel');
+        return collect(MasterApiService::personel())->keyBy('idpersonel');
     }
 
     private function fetchPosisiMap(): Collection
     {
-        $response = Http::get('http://127.0.0.1:8000/api/posisi');
-        $list = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return collect($list)->keyBy('idposisi');
+        return collect(MasterApiService::posisi())->keyBy('idposisi');
     }
 
     private function fetchSubBarangMap(): Collection
     {
-        $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
-        $barangList = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return BarangVarianService::buildSubBarangMap($barangList);
+        return BarangVarianService::buildSubBarangMap(MasterApiService::barangWithVarian());
     }
 }

@@ -36,9 +36,15 @@
                             $namaVarian = $row->idbarangvarian
                                 ? ($varianMap[$row->idbarangvarian]['label'] ?? 'Varian #'.$row->idbarangvarian)
                                 : '-';
-                            $penerima = $row->personel
-                                ? ($personelMapApi[$row->personel->idpersonel]['namapersonel'] ?? 'Personel #'.$row->personel->idpersonel)
-                                : ($personelMapApi[$row->idpersonel]['namapersonel'] ?? 'Personel #'.$row->idpersonel);
+                            $hasPersonel = $row->personel || $row->idpersonel;
+                            if ($row->personel) {
+                                $penerima = $personelMapApi[$row->personel->idpersonel]['namapersonel'] ?? 'Personel #'.$row->personel->idpersonel;
+                            } elseif ($row->idpersonel) {
+                                $penerima = $personelMapApi[$row->idpersonel]['namapersonel'] ?? 'Personel #'.$row->idpersonel;
+                            } else {
+                                // Transfer rows: no personel — show catatan as penerima
+                                $penerima = $row->catatan ?: '-';
+                            }
                         @endphp
                         <tr>
                             <td class="fw-semibold">{{ $namaPpe }}</td>
@@ -46,7 +52,7 @@
                             <td class="text-center">{{ $row->qty }}</td>
                             <td>{{ $row->tanggal->format('d/m/Y') }}</td>
                             <td>{{ $penerima }}</td>
-                            <td>{{ $row->catatan ?: '-' }}</td>
+                            <td>{{ $hasPersonel ? ($row->catatan ?: '-') : '-' }}</td>
                         </tr>
                     @endforeach
                 </tbody>

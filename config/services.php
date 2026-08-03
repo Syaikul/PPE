@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'master_api' => [
+        'url' => env('MASTER_API_URL', 'http://127.0.0.1:8000'),
+    ],
+
 ];

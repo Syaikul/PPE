@@ -34,7 +34,9 @@
                         @php
                             $item = $k->item;
                             $mr = $item->permintaan;
-                            $nama = $varianMap[$item->idbarangvarian]['label'] ?? 'Barang #'.$item->idbarangvarian;
+                            $nama = $item->idbarangvarian
+                                ? ($varianMap[$item->idbarangvarian]['label'] ?? 'Barang #'.$item->idbarangvarian)
+                                : ($subBarangMap[$item->idsubbarang]['label'] ?? 'Barang #'.($item->idsubbarang ?? ''));
                         @endphp
                         <tr>
                             <td class="fw-semibold">{{ $mr->nomor_mr }}</td>

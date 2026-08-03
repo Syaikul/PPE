@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
-
 class GudangContext
 {
     public static function activate(int $idgudang): void
@@ -38,16 +36,8 @@ class GudangContext
 
     private static function resolveName(int $idgudang): string
     {
-        $gudang = self::fetchGudang($idgudang);
+        $gudang = MasterApiService::gudangById($idgudang);
 
         return $gudang['namagudang'] ?? 'Gudang #'.$idgudang;
-    }
-
-    private static function fetchGudang(int $idgudang): ?array
-    {
-        $response = Http::get('http://127.0.0.1:8000/api/gudang');
-        $list = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return collect($list)->firstWhere('idgudang', $idgudang);
     }
 }

@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Personel;
 use App\Models\PersonelPosisi;
+use App\Services\MasterApiService;
 use App\Services\PersonelStatusService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 
 class PersonelController extends Controller
 {
@@ -19,16 +19,10 @@ class PersonelController extends Controller
     {
         session(['idgudang' => $idgudang]);
 
-        $gudangResponse = Http::get('http://127.0.0.1:8000/api/gudang');
-        $gudangList = $gudangResponse->successful() ? ($gudangResponse->json('data') ?? []) : [];
-        $gudang = collect($gudangList)->firstWhere('idgudang', (int) $idgudang);
-
-        $personelResponse = Http::get('http://127.0.0.1:8000/api/personel');
-        $personelApiList = $personelResponse->successful() ? ($personelResponse->json('data') ?? []) : [];
+        $gudang = MasterApiService::gudangById((int) $idgudang);
+        $personelApiList = MasterApiService::personel();
+        $posisiList = MasterApiService::posisi();
         $personelMap = collect($personelApiList)->keyBy('idpersonel');
-
-        $posisiResponse = Http::get('http://127.0.0.1:8000/api/posisi');
-        $posisiList = $posisiResponse->successful() ? ($posisiResponse->json('data') ?? []) : [];
         $posisiMap = collect($posisiList)->keyBy('idposisi');
 
         $personelList = Personel::with('posisi')

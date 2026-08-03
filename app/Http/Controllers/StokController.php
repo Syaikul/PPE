@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Stok;
 use App\Services\BarangVarianService;
+use App\Services\MasterApiService;
 use App\Services\StokItemService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 
 class StokController extends Controller
 {
@@ -19,12 +19,8 @@ class StokController extends Controller
     {
         session(['idgudang' => $idgudang]);
 
-        $gudangResponse = Http::get('http://127.0.0.1:8000/api/gudang');
-        $gudangList = $gudangResponse->successful() ? ($gudangResponse->json('data') ?? []) : [];
-        $gudang = collect($gudangList)->firstWhere('idgudang', (int) $idgudang);
-
-        $barangResponse = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
-        $barangList = $barangResponse->successful() ? ($barangResponse->json('data') ?? []) : [];
+        $gudang = MasterApiService::gudangById((int) $idgudang);
+        $barangList = MasterApiService::barangWithVarian();
         $stokOptions = BarangVarianService::buildStokOptions($barangList);
         $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
         $varianMap = BarangVarianService::buildMap($barangList);
@@ -55,8 +51,7 @@ class StokController extends Controller
         $idbarangvarian = $parsed['idbarangvarian'];
 
         if ($idbarangvarian) {
-            $barangResponse = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
-            $barangList = $barangResponse->successful() ? ($barangResponse->json('data') ?? []) : [];
+            $barangList = MasterApiService::barangWithVarian();
             foreach (BarangVarianService::buildStokOptions($barangList) as $opt) {
                 if ($opt['type'] === 'varian' && (int) $opt['idvarian'] === $idbarangvarian) {
                     $idsubbarang = $opt['idsubbarang'];

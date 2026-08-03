@@ -16,6 +16,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/gudang/{idgudang}/stok/{id}', [App\Http\Controllers\StokController::class, 'update'])->name('gudang.stok.update');
     Route::delete('/gudang/{idgudang}/stok/{id}', [App\Http\Controllers\StokController::class, 'destroy'])->name('gudang.stok.destroy');
 
+    Route::get('/gudang/{idgudang}/transfer-barang', [App\Http\Controllers\TransferBarangController::class, 'create'])->name('gudang.transfer-barang');
+    Route::post('/gudang/{idgudang}/transfer-barang', [App\Http\Controllers\TransferBarangController::class, 'store'])->name('gudang.transfer-barang.store');
+
     Route::get('/gudang/{idgudang}/personel', [App\Http\Controllers\PersonelController::class, 'index'])->name('gudang.personel');
     Route::post('/gudang/{idgudang}/personel', [App\Http\Controllers\PersonelController::class, 'store'])->name('gudang.personel.store');
     Route::put('/gudang/{idgudang}/personel/{id}', [App\Http\Controllers\PersonelController::class, 'update'])->name('gudang.personel.update');
@@ -68,6 +71,21 @@ Route::middleware('auth')->group(function () {
     Route::get('/gudang/{idgudang}/approval-demob', [App\Http\Controllers\ApprovalDemobController::class, 'index'])->name('gudang.approval-demob');
     Route::post('/gudang/{idgudang}/approval-demob/{personelId}/approve', [App\Http\Controllers\ApprovalDemobController::class, 'approve'])->name('gudang.approval-demob.approve');
     Route::post('/gudang/{idgudang}/approval-demob/{personelId}/reject', [App\Http\Controllers\ApprovalDemobController::class, 'reject'])->name('gudang.approval-demob.reject');
+    Route::post('/gudang/{idgudang}/approval-demob/spare/{pemakaianId}/approve', [App\Http\Controllers\ApprovalDemobController::class, 'approveSpare'])->name('gudang.approval-demob.spare.approve');
+    Route::post('/gudang/{idgudang}/approval-demob/spare/{pemakaianId}/reject', [App\Http\Controllers\ApprovalDemobController::class, 'rejectSpare'])->name('gudang.approval-demob.spare.reject');
+
+    // Peminjaman PPE
+    Route::get('/gudang/{idgudang}/peminjaman-ppe', [App\Http\Controllers\PeminjamanPpeController::class, 'index'])->name('gudang.peminjaman-ppe');
+    Route::post('/gudang/{idgudang}/peminjaman-ppe', [App\Http\Controllers\PeminjamanPpeController::class, 'store'])->name('gudang.peminjaman-ppe.store');
+    Route::post('/gudang/{idgudang}/peminjaman-ppe/{id}/approve', [App\Http\Controllers\PeminjamanPpeController::class, 'approve'])->name('gudang.peminjaman-ppe.approve');
+    Route::post('/gudang/{idgudang}/peminjaman-ppe/{id}/tolak', [App\Http\Controllers\PeminjamanPpeController::class, 'reject'])->name('gudang.peminjaman-ppe.reject');
+    Route::post('/gudang/{idgudang}/peminjaman-ppe/{id}/kembalikan', [App\Http\Controllers\PeminjamanPpeController::class, 'kembalikan'])->name('gudang.peminjaman-ppe.kembalikan');
+
+    // Spare Barang
+    Route::get('/gudang/{idgudang}/spare-barang', [App\Http\Controllers\SpareBarangController::class, 'index'])->name('gudang.spare-barang');
+    Route::post('/gudang/{idgudang}/spare-barang', [App\Http\Controllers\SpareBarangController::class, 'store'])->name('gudang.spare-barang.store');
+    Route::post('/gudang/{idgudang}/spare-barang/{id}/pakai', [App\Http\Controllers\SpareBarangController::class, 'pakai'])->name('gudang.spare-barang.pakai');
+    Route::post('/gudang/{idgudang}/spare-barang/{id}/kembalikan', [App\Http\Controllers\SpareBarangController::class, 'kembalikan'])->name('gudang.spare-barang.kembalikan');
 });
 
 Route::get('/dashboard', function () {

@@ -67,6 +67,12 @@
                                 </a>
                             </li>
 
+                            <li>
+                                <a href="{{ session('idgudang') ? route('gudang.transfer-barang', session('idgudang')) : route('home') }}">
+                                    <span class="sub-item">Transfer Barang</span>
+                                </a>
+                            </li>
+
                         </ul>
                     </div>
                 </li>
@@ -158,35 +164,15 @@
 
                 <!-- Peminjaman PPE -->
                 <li class="nav-item">
-                    <a data-bs-toggle="collapse" href="#peminjamanppe" class="collapsed" aria-expanded="false">
-
+                    <a href="{{ session('idgudang') ? route('gudang.peminjaman-ppe', session('idgudang')) : route('home') }}">
                         <i class="fas fa-handshake"></i>
                         <p>Peminjaman PPE</p>
-                        <span class="caret"></span>
                     </a>
-
-                    <div class="collapse" id="peminjamanppe">
-                        <ul class="nav nav-collapse">
-
-                            <li>
-                                <a href="">
-                                    <span class="sub-item">Pinjam</span>
-                                </a>
-                            </li>
-
-                            <li>
-                                <a href="">
-                                    <span class="sub-item">Dipinjam</span>
-                                </a>
-                            </li>
-
-                        </ul>
-                    </div>
                 </li>
 
                 <!-- Spare Barang -->
                 <li class="nav-item">
-                    <a href="widgets.html">
+                    <a href="{{ session('idgudang') ? route('gudang.spare-barang', session('idgudang')) : route('home') }}">
                         <i class="fas fa-box-open"></i>
                         <p>Spare Barang</p>
                     </a>

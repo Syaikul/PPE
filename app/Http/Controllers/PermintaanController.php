@@ -7,10 +7,10 @@ use App\Models\PermintaanItem;
 use App\Models\PermintaanKedatangan;
 use App\Models\Stok;
 use App\Services\BarangVarianService;
+use App\Services\MasterApiService;
 use App\Services\MrPdfExportService;
 use App\Services\StokItemService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 
 class PermintaanController extends Controller
 {
@@ -187,17 +187,12 @@ class PermintaanController extends Controller
 
     private function fetchGudang($idgudang): ?array
     {
-        $response = Http::get('http://127.0.0.1:8000/api/gudang');
-        $list = $response->successful() ? ($response->json('data') ?? []) : [];
-
-        return collect($list)->firstWhere('idgudang', (int) $idgudang);
+        return MasterApiService::gudangById((int) $idgudang);
     }
 
     private function fetchBarangList(): array
     {
-        $response = Http::get('http://127.0.0.1:8000/api/barang-with-varian');
-
-        return $response->successful() ? ($response->json('data') ?? []) : [];
+        return MasterApiService::barangWithVarian();
     }
 
     private function fetchVarianMap(): \Illuminate\Support\Collection

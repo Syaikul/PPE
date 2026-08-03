@@ -30,10 +30,7 @@ class BarangVarianService
             foreach ($barang['varian'] ?? [] as $varian) {
                 $options[] = [
                     'idvarian' => $varian['idvarian'],
-                    'label'    => trim(
-                        ($barang['namabarang'] ?? '').' — '.
-                        ($varian['nama_tampilan'] ?? $varian['namavarian'] ?? '')
-                    ),
+                    'label'    => self::displayNameVarian($varian),
                     'kode'     => $varian['kode_lengkap'] ?? '',
                 ];
             }
@@ -74,10 +71,7 @@ class BarangVarianService
                         'type'        => 'sub',
                         'idsubbarang' => $subBarang['idsubbarang'],
                         'idvarian'    => null,
-                        'label'       => trim(
-                            ($barang['namabarang'] ?? '').' '.
-                            ($subBarang['nama_tampilan'] ?? $subBarang['namasubbarang'] ?? '')
-                        ),
+                        'label'       => self::displayNameSubBarang($subBarang),
                         'kode'        => $subBarang['kode_lengkap'] ?? '',
                     ];
                 }
@@ -89,10 +83,7 @@ class BarangVarianService
                     'type'        => 'varian',
                     'idsubbarang' => null,
                     'idvarian'    => $varian['idvarian'],
-                    'label'       => trim(
-                        ($barang['namabarang'] ?? '').' — '.
-                        ($varian['nama_tampilan'] ?? $varian['namavarian'] ?? '')
-                    ),
+                    'label'       => self::displayNameVarian($varian),
                     'kode'        => $varian['kode_lengkap'] ?? '',
                 ];
             }
@@ -163,10 +154,7 @@ class BarangVarianService
 
                 $options[] = [
                     'idsubbarang'       => $subBarang['idsubbarang'],
-                    'label'             => trim(
-                        ($barang['namabarang'] ?? '').' '.
-                        ($subBarang['nama_tampilan'] ?? $subBarang['namasubbarang'] ?? '')
-                    ),
+                    'label'             => self::displayNameSubBarang($subBarang),
                     'kode'              => $subBarang['kode_lengkap'] ?? '',
                     'has_real_variants' => ! empty($realVarianIds),
                     'varian_ids'        => $realVarianIds,
@@ -237,19 +225,23 @@ class BarangVarianService
         return collect($map);
     }
 
+    /** Label level terakhir: sub saja / default varian → nama sub; varian nyata → nama varian. */
     private static function buildLabel(array $barang, array $subBarang, array $varian): string
     {
         if (self::isDefaultVariant($varian)) {
-            return trim(
-                ($barang['namabarang'] ?? '') . ' ' .
-                ($subBarang['nama_tampilan'] ?? $subBarang['namasubbarang'] ?? '')
-            );
+            return self::displayNameSubBarang($subBarang);
         }
 
-        return trim(
-            ($barang['namabarang'] ?? '') . ' ' .
-            ($subBarang['nama_tampilan'] ?? $subBarang['namasubbarang'] ?? '') . ' ' .
-            ($varian['nama_tampilan'] ?? $varian['namavarian'] ?? '')
-        );
+        return self::displayNameVarian($varian);
+    }
+
+    private static function displayNameSubBarang(array $subBarang): string
+    {
+        return trim((string) ($subBarang['nama_tampilan'] ?? $subBarang['namasubbarang'] ?? ''));
+    }
+
+    private static function displayNameVarian(array $varian): string
+    {
+        return trim((string) ($varian['nama_tampilan'] ?? $varian['namavarian'] ?? ''));
     }
 }

@@ -2,8 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use App\Services\MasterApiService;
 
 class HomeController extends Controller
 {
@@ -24,8 +23,7 @@ class HomeController extends Controller
      */
     public function index()
     {
-        $response = Http::get('http://127.0.0.1:8000/api/gudang');
-        $gudangs = $response->successful() ? ($response->json('data') ?? []) : [];
+        $gudangs = MasterApiService::gudang();
 
         return view('home', compact('gudangs'));
     }
