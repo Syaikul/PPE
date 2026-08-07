@@ -65,10 +65,10 @@ class DemobilisasiController extends Controller
             'tanggal_demob' => now()->toDateString(),
         ]);
 
-        // Personel kembali Offshore di semua gudang (belum bisa dimob lagi sampai demob di-approve).
+        // Personel kembali Offsite di semua gudang (belum bisa dimob lagi sampai demob di-approve).
         $mp->load('personel');
         if ($mp->personel) {
-            PersonelStatusService::syncOffshore($mp->personel->idpersonel);
+            PersonelStatusService::syncOffsite($mp->personel->idpersonel);
         }
 
         return back()->with('success', 'Personel di-demob. Silakan lakukan pengecekan kelengkapan.');
@@ -134,11 +134,12 @@ class DemobilisasiController extends Controller
             ->where('status', 'ada')
             ->filter(fn ($p) => ($kategoriMap[$p->idsubbarang] ?? 'Non Consumable') !== 'Consumable')
             ->map(fn ($p) => [
-                'idsubbarang' => $p->idsubbarang,
-                'label'       => $subBarangMap[$p->idsubbarang]['label'] ?? 'Item #'.$p->idsubbarang,
-                'jumlah'      => $p->jumlah,
-                'kondisi'     => $existing[$p->idsubbarang]->kondisi ?? null,
-                'catatan'     => $existing[$p->idsubbarang]->catatan ?? null,
+                'idsubbarang'    => $p->idsubbarang,
+                'label'          => $subBarangMap[$p->idsubbarang]['label'] ?? 'Item #'.$p->idsubbarang,
+                'jumlah'         => $p->jumlah,
+                'kondisi'        => $existing[$p->idsubbarang]->kondisi ?? null,
+                'qty_bermasalah' => $existing[$p->idsubbarang]->qty_bermasalah ?? null,
+                'catatan'        => $existing[$p->idsubbarang]->catatan ?? null,
             ])
             ->values();
 
@@ -152,13 +153,18 @@ class DemobilisasiController extends Controller
     public function storeCekKelengkapan(Request $request, $idgudang, $id, $personelId)
     {
         $request->validate([
-            'kondisi'   => 'required|array|min:1',
-            'kondisi.*' => 'required|in:layak,tidak_layak,hilang',
-            'catatan'   => 'array',
+            'kondisi'          => 'required|array|min:1',
+            'kondisi.*'        => 'required|in:layak,tidak_layak,hilang',
+            'qty_bermasalah'   => 'array',
+            'qty_bermasalah.*' => 'nullable|integer|min:1',
+            'catatan'          => 'array',
         ]);
 
         $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($id);
-        $mp = MobilisasiPersonel::where('mobilisasi_id', $mobilisasi->id)->findOrFail($personelId);
+        $mp = MobilisasiPersonel::with('pengecekan')->where('mobilisasi_id', $mobilisasi->id)->findOrFail($personelId);
+
+        // Jumlah yang dibawa saat MOB per item (batas atas jumlah bermasalah).
+        $jumlahByIdsub = $mp->pengecekan->keyBy('idsubbarang')->map(fn ($p) => (int) $p->jumlah);
 
         // Catatan wajib untuk kondisi tidak layak / hilang.
         foreach ($request->kondisi as $idsub => $kondisi) {
@@ -171,14 +177,29 @@ class DemobilisasiController extends Controller
 
         $adaMasalah = false;
 
-        DB::transaction(function () use ($request, $mp, &$adaMasalah) {
+        DB::transaction(function () use ($request, $mp, $jumlahByIdsub, &$adaMasalah) {
             foreach ($request->kondisi as $idsub => $kondisi) {
+                $jumlah = max(1, $jumlahByIdsub[(int) $idsub] ?? 1);
+                $bermasalah = in_array($kondisi, ['tidak_layak', 'hilang'], true);
+
+                // Berapa unit yang rusak/hilang; sisanya dianggap masih layak.
+                $qtyBermasalah = null;
+                if ($bermasalah) {
+                    $qtyBermasalah = (int) ($request->input("qty_bermasalah.$idsub") ?: $jumlah);
+                    $qtyBermasalah = min(max(1, $qtyBermasalah), $jumlah);
+                }
+
                 DemobPengecekan::updateOrCreate(
                     ['mobilisasi_personel_id' => $mp->id, 'idsubbarang' => (int) $idsub],
-                    ['kondisi' => $kondisi, 'catatan' => $request->input("catatan.$idsub")]
+                    [
+                        'jumlah'         => $jumlah,
+                        'kondisi'        => $kondisi,
+                        'qty_bermasalah' => $qtyBermasalah,
+                        'catatan'        => $request->input("catatan.$idsub"),
+                    ]
                 );
 
-                if (in_array($kondisi, ['tidak_layak', 'hilang'], true)) {
+                if ($bermasalah) {
                     $adaMasalah = true;
                 }
             }
@@ -217,9 +238,11 @@ class DemobilisasiController extends Controller
         $nama = $personelMapApi[$mp->personel->idpersonel]['namapersonel'] ?? 'Personel #'.$mp->personel_id;
 
         $items = $mp->demobPengecekan->map(fn ($d) => [
-            'label'   => $subBarangMap[$d->idsubbarang]['label'] ?? 'Item #'.$d->idsubbarang,
-            'kondisi' => $d->kondisi,
-            'catatan' => $d->catatan,
+            'label'          => $subBarangMap[$d->idsubbarang]['label'] ?? 'Item #'.$d->idsubbarang,
+            'kondisi'        => $d->kondisi,
+            'jumlah'         => $d->jumlah,
+            'qty_bermasalah' => $d->isBermasalah() ? $d->qtyBermasalah() : null,
+            'catatan'        => $d->catatan,
         ])->values();
 
         return view('demobilisasi.dokumen_demobilisasi', compact(

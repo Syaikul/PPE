@@ -33,7 +33,7 @@
 <div class="card shadow-sm">
     <div class="card-header">
         <h4 class="card-title mb-0">Data Pemakaian PPE</h4>
-        <small class="text-muted">Jumlah = berapa kali personel meminta item (Non Consumable, lintas gudang).</small>
+        <small class="text-muted">Jumlah = total unit item yang pernah diminta personel (Non Consumable, lintas gudang).</small>
     </div>
     <div class="card-body p-0">
         <div class="pemakaian-scroll">

@@ -42,9 +42,10 @@ class PemakaianPpeController extends Controller
             'label'       => $subBarangMap[$idsub]['label'] ?? 'Item #'.$idsub,
         ]);
 
-        // counts[idpersonel][idsubbarang] = jumlah kali request.
+        // counts[idpersonel][idsubbarang] = total UNIT yang diminta (bukan jumlah baris keluar).
+        // Satu barang keluar qty 2 tetap dihitung 2 unit permintaan.
         $counts = $keluar->groupBy('idpersonel')->map(
-            fn ($rows) => $rows->groupBy('idsubbarang')->map->count()
+            fn ($rows) => $rows->groupBy('idsubbarang')->map(fn ($r) => (int) $r->sum('qty'))
         );
 
         $rows = $personelList->map(fn ($p) => [
@@ -90,6 +91,7 @@ class PemakaianPpeController extends Controller
                 'riwayat'     => $rows->values()->map(fn ($r, $i) => [
                     'no'      => $i + 1,
                     'tanggal' => $r->tanggal,
+                    'qty'     => (int) $r->qty,
                     'catatan' => $r->catatan,
                     'varian'  => $r->idbarangvarian
                         ? ($varianMap[$r->idbarangvarian]['label'] ?? 'Varian #'.$r->idbarangvarian)

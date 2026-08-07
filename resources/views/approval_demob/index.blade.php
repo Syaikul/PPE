@@ -56,6 +56,9 @@
                         <span class="badge {{ $kondisiBadge[$item['kondisi']] ?? 'bg-secondary' }}">
                             {{ $kondisiLabel[$item['kondisi']] ?? $item['kondisi'] }}
                         </span>
+                        @if(($item['jumlah'] ?? 1) > 1)
+                            <span class="ms-1">{{ $item['qty_bermasalah'] }} dari {{ $item['jumlah'] }} unit{{ $item['jumlah'] > $item['qty_bermasalah'] ? ', sisanya Layak' : '' }}</span>
+                        @endif
                     </div>
                     @if($item['catatan'])
                         <div class="small text-muted mt-1">Catatan: {{ $item['catatan'] }}</div>

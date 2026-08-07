@@ -52,11 +52,15 @@
             <div class="item-history" id="item-{{ $item['idsubbarang'] }}" style="{{ $i === 0 ? '' : 'display:none;' }}">
                 @foreach($item['riwayat'] as $r)
                     <div class="border rounded p-3 mb-3 bg-light">
-                        <div class="text-primary fw-bold mb-2">Permintaan {{ $r['no'] }}</div>
+                        <div class="text-primary fw-bold mb-2">
+                            Permintaan {{ $r['no'] }}
+                            <span class="badge {{ $r['qty'] > 1 ? 'bg-warning text-dark' : 'bg-light text-dark border' }} ms-1">{{ $r['qty'] }} unit</span>
+                        </div>
                         <div class="row">
-                            <div class="col-md-3"><span class="text-muted">Tanggal:</span> <strong>{{ $r['tanggal']->format('d M Y') }}</strong></div>
+                            <div class="col-md-2"><span class="text-muted">Tanggal:</span> <strong>{{ $r['tanggal']->format('d M Y') }}</strong></div>
+                            <div class="col-md-2"><span class="text-muted">Qty:</span> <strong>{{ $r['qty'] }}</strong></div>
                             <div class="col-md-3"><span class="text-muted">Varian:</span> <strong>{{ $r['varian'] ?? '-' }}</strong></div>
-                            <div class="col-md-3"><span class="text-muted">Diambil dari Gudang:</span> <strong>{{ $r['gudang'] }}</strong></div>
+                            <div class="col-md-2"><span class="text-muted">Diambil dari Gudang:</span> <strong>{{ $r['gudang'] }}</strong></div>
                             <div class="col-md-3"><span class="text-muted">Catatan:</span> {{ $r['catatan'] ?: '-' }}</div>
                         </div>
                     </div>

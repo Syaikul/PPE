@@ -20,6 +20,7 @@ class PersonelController extends Controller
         session(['idgudang' => $idgudang]);
 
         $gudang = MasterApiService::gudangById((int) $idgudang);
+        $gudangMap = collect(MasterApiService::gudang())->keyBy('idgudang');
         $personelApiList = MasterApiService::personel();
         $posisiList = MasterApiService::posisi();
         $personelMap = collect($personelApiList)->keyBy('idpersonel');
@@ -29,6 +30,22 @@ class PersonelController extends Controller
             ->where('idgudang', $idgudang)
             ->latest()
             ->get();
+
+        // Onsite dari gudang ini => "Onsite"; dari gudang lain => "Onsite (Nama Gudang)".
+        $personelList->each(function ($p) use ($idgudang, $gudangMap) {
+            $label = $p->status;
+
+            if ($p->status === PersonelStatusService::STATUS_ONSITE) {
+                $asalGudang = PersonelStatusService::activeMobilisasiGudang((int) $p->idpersonel);
+
+                if ($asalGudang && (int) $asalGudang !== (int) $idgudang) {
+                    $namaGudang = $gudangMap[$asalGudang]['namagudang'] ?? 'Gudang #'.$asalGudang;
+                    $label = 'Onsite ('.$namaGudang.')';
+                }
+            }
+
+            $p->status_label = $label;
+        });
 
         return view('personel.index', compact(
             'idgudang',
@@ -45,7 +62,7 @@ class PersonelController extends Controller
     {
         $request->validate([
             'idpersonel' => 'required|integer',
-            'status'     => 'required|in:Onshore,Offshore',
+            'status'     => 'required|in:Onsite,Offsite',
             'idposisi'   => 'required|array|min:1',
             'idposisi.*' => 'integer',
         ]);
@@ -79,7 +96,7 @@ class PersonelController extends Controller
     public function update(Request $request, $idgudang, $id)
     {
         $request->validate([
-            'status'     => 'required|in:Onshore,Offshore',
+            'status'     => 'required|in:Onsite,Offsite',
             'idposisi'   => 'required|array|min:1',
             'idposisi.*' => 'integer',
         ]);

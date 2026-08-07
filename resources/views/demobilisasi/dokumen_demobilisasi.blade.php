@@ -49,6 +49,13 @@
                                 <span class="badge {{ $kondisiBadge[$item['kondisi']] ?? 'bg-light text-dark' }}">
                                     {{ $kondisiLabel[$item['kondisi']] ?? '-' }}
                                 </span>
+                                @if($item['qty_bermasalah'] && ($item['jumlah'] ?? 1) > $item['qty_bermasalah'])
+                                    <small class="d-block text-muted mt-1">
+                                        {{ $item['qty_bermasalah'] }} dari {{ $item['jumlah'] }} unit, sisanya Layak
+                                    </small>
+                                @elseif($item['qty_bermasalah'] && ($item['jumlah'] ?? 1) > 1)
+                                    <small class="d-block text-muted mt-1">{{ $item['qty_bermasalah'] }} unit</small>
+                                @endif
                             </td>
                             <td>{{ $item['catatan'] ?: '-' }}</td>
                         </tr>

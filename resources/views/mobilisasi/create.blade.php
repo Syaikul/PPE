@@ -79,7 +79,7 @@
                         @empty
                             <tr>
                                 <td colspan="4" class="text-center text-muted py-4">
-                                    Tidak ada personel yang tersedia. Personel yang masih Onshore (mobilisasi aktif) tidak ditampilkan. Tambahkan personel baru di Data Personel atau selesaikan demobilisasi terlebih dahulu.
+                                    Tidak ada personel yang tersedia. Personel yang masih Onsite (mobilisasi aktif) tidak ditampilkan. Tambahkan personel baru di Data Personel atau selesaikan demobilisasi terlebih dahulu.
                                 </td>
                             </tr>
                         @endforelse

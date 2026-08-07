@@ -54,6 +54,11 @@ Route::middleware('auth')->group(function () {
     Route::put('/gudang/{idgudang}/mobilisasi/{id}/perlengkapan/{itemId}', [App\Http\Controllers\MobilisasiController::class, 'updatePerlengkapan'])->name('gudang.mobilisasi.perlengkapan.update');
     Route::delete('/gudang/{idgudang}/mobilisasi/{id}/perlengkapan/{itemId}', [App\Http\Controllers\MobilisasiController::class, 'destroyPerlengkapan'])->name('gudang.mobilisasi.perlengkapan.destroy');
 
+    // Spare Barang (terikat mobilisasi — dikelola dari Data Perlengkapan)
+    Route::post('/gudang/{idgudang}/mobilisasi/{id}/spare-barang', [App\Http\Controllers\SpareBarangController::class, 'store'])->name('gudang.mobilisasi.spare.store');
+    Route::post('/gudang/{idgudang}/mobilisasi/{id}/spare-barang/{srId}/pakai', [App\Http\Controllers\SpareBarangController::class, 'pakai'])->name('gudang.mobilisasi.spare.pakai');
+    Route::post('/gudang/{idgudang}/mobilisasi/{id}/spare-barang/{srId}/kembalikan', [App\Http\Controllers\SpareBarangController::class, 'kembalikan'])->name('gudang.mobilisasi.spare.kembalikan');
+
     Route::get('/gudang/{idgudang}/mobilisasi/{id}/pengecekan/{personelId}', [App\Http\Controllers\MobilisasiController::class, 'pengecekan'])->name('gudang.mobilisasi.pengecekan');
     Route::put('/gudang/{idgudang}/mobilisasi/{id}/pengecekan/{personelId}', [App\Http\Controllers\MobilisasiController::class, 'updatePengecekan'])->name('gudang.mobilisasi.pengecekan.update');
     Route::post('/gudang/{idgudang}/mobilisasi/{id}/pengecekan/{personelId}/submit', [App\Http\Controllers\MobilisasiController::class, 'submitPersonel'])->name('gudang.mobilisasi.pengecekan.submit');
@@ -80,12 +85,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/gudang/{idgudang}/peminjaman-ppe/{id}/approve', [App\Http\Controllers\PeminjamanPpeController::class, 'approve'])->name('gudang.peminjaman-ppe.approve');
     Route::post('/gudang/{idgudang}/peminjaman-ppe/{id}/tolak', [App\Http\Controllers\PeminjamanPpeController::class, 'reject'])->name('gudang.peminjaman-ppe.reject');
     Route::post('/gudang/{idgudang}/peminjaman-ppe/{id}/kembalikan', [App\Http\Controllers\PeminjamanPpeController::class, 'kembalikan'])->name('gudang.peminjaman-ppe.kembalikan');
-
-    // Spare Barang
-    Route::get('/gudang/{idgudang}/spare-barang', [App\Http\Controllers\SpareBarangController::class, 'index'])->name('gudang.spare-barang');
-    Route::post('/gudang/{idgudang}/spare-barang', [App\Http\Controllers\SpareBarangController::class, 'store'])->name('gudang.spare-barang.store');
-    Route::post('/gudang/{idgudang}/spare-barang/{id}/pakai', [App\Http\Controllers\SpareBarangController::class, 'pakai'])->name('gudang.spare-barang.pakai');
-    Route::post('/gudang/{idgudang}/spare-barang/{id}/kembalikan', [App\Http\Controllers\SpareBarangController::class, 'kembalikan'])->name('gudang.spare-barang.kembalikan');
 });
 
 Route::get('/dashboard', function () {

@@ -12,6 +12,7 @@ class SpareBarang extends Model
 
     protected $fillable = [
         'idgudang',
+        'mobilisasi_id',
         'no_sr',
         'personel_id',
         'tanggal',
@@ -29,6 +30,11 @@ class SpareBarang extends Model
     public function personel(): BelongsTo
     {
         return $this->belongsTo(Personel::class, 'personel_id');
+    }
+
+    public function mobilisasi(): BelongsTo
+    {
+        return $this->belongsTo(Mobilisasi::class, 'mobilisasi_id');
     }
 
     /** SR sudah dikembalikan bila semua itemnya sudah dikembalikan. */

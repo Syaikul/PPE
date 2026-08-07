@@ -48,16 +48,17 @@ class SpareBarangService
      *
      * @param  array<int, array{stok_id: int, qty: int}>  $items
      */
-    public static function createSr(int $idgudang, string $noSr, ?int $personelId, string $tanggal, array $items): SpareBarang
+    public static function createSr(int $idgudang, string $noSr, ?int $personelId, string $tanggal, array $items, ?int $mobilisasiId = null): SpareBarang
     {
         $filtered = self::filterItems($items);
 
-        return DB::transaction(function () use ($idgudang, $noSr, $personelId, $tanggal, $filtered) {
+        return DB::transaction(function () use ($idgudang, $noSr, $personelId, $tanggal, $filtered, $mobilisasiId) {
             $sr = SpareBarang::create([
-                'idgudang'    => $idgudang,
-                'no_sr'       => $noSr,
-                'personel_id' => $personelId,
-                'tanggal'     => $tanggal,
+                'idgudang'      => $idgudang,
+                'mobilisasi_id' => $mobilisasiId,
+                'no_sr'         => $noSr,
+                'personel_id'   => $personelId,
+                'tanggal'       => $tanggal,
             ]);
 
             foreach ($filtered as $item) {

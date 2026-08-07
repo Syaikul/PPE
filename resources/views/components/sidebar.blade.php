@@ -170,14 +170,6 @@
                     </a>
                 </li>
 
-                <!-- Spare Barang -->
-                <li class="nav-item">
-                    <a href="{{ session('idgudang') ? route('gudang.spare-barang', session('idgudang')) : route('home') }}">
-                        <i class="fas fa-box-open"></i>
-                        <p>Spare Barang</p>
-                    </a>
-                </li>
-
                 <!-- Filter -->
                 <li class="nav-item">
                     <a href="widgets.html">

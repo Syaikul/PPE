@@ -12,7 +12,9 @@ class DemobPengecekan extends Model
     protected $fillable = [
         'mobilisasi_personel_id',
         'idsubbarang',
+        'jumlah',
         'kondisi',
+        'qty_bermasalah',
         'catatan',
     ];
 
@@ -28,5 +30,15 @@ class DemobPengecekan extends Model
     public function isBermasalah(): bool
     {
         return in_array($this->kondisi, [self::KONDISI_TIDAK_LAYAK, self::KONDISI_HILANG], true);
+    }
+
+    /** Jumlah unit yang rusak/hilang (fallback 1 untuk data lama tanpa qty). */
+    public function qtyBermasalah(): int
+    {
+        if (! $this->isBermasalah()) {
+            return 0;
+        }
+
+        return (int) ($this->qty_bermasalah ?? 1);
     }
 }

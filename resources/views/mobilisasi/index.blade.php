@@ -63,7 +63,7 @@
                                 <a href="{{ route('gudang.mobilisasi.show', [$idgudang, $mob->id]) }}"
                                     class="btn btn-sm btn-success">Detail</a>
                                 <form action="{{ route('gudang.mobilisasi.destroy', [$idgudang, $mob->id]) }}"
-                                    method="POST" class="d-inline" onsubmit="return confirm('Hapus mobilisasi ini? Personel akan kembali Offshore.')">
+                                    method="POST" class="d-inline" onsubmit="return confirm('Hapus mobilisasi ini? Personel akan kembali Offsite.')">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger">Hapus</button>

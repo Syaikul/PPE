@@ -23,10 +23,13 @@ class PpeOwnershipService
 
     public static function lostQty(int $idpersonel, int $idsubbarang): int
     {
-        return DemobPengecekan::where('idsubbarang', $idsubbarang)
+        // Jumlah UNIT yang rusak/hilang, bukan jumlah baris pengecekan.
+        // Data lama tanpa qty_bermasalah dihitung 1 unit per baris.
+        return (int) DemobPengecekan::where('idsubbarang', $idsubbarang)
             ->whereIn('kondisi', [DemobPengecekan::KONDISI_TIDAK_LAYAK, DemobPengecekan::KONDISI_HILANG])
             ->whereHas('personel.personel', fn ($q) => $q->where('idpersonel', $idpersonel))
-            ->count();
+            ->get()
+            ->sum(fn ($d) => $d->qtyBermasalah());
     }
 
     public static function ownedUsableQty(int $idpersonel, int $idsubbarang): int

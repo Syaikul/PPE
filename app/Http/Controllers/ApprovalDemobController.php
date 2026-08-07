@@ -43,9 +43,11 @@ class ApprovalDemobController extends Controller
                 $problems = $mp->demobPengecekan
                     ->whereIn('kondisi', [DemobPengecekan::KONDISI_TIDAK_LAYAK, DemobPengecekan::KONDISI_HILANG])
                     ->map(fn ($d) => [
-                        'label'   => $subBarangMap[$d->idsubbarang]['label'] ?? 'Item #'.$d->idsubbarang,
-                        'kondisi' => $d->kondisi,
-                        'catatan' => $d->catatan,
+                        'label'          => $subBarangMap[$d->idsubbarang]['label'] ?? 'Item #'.$d->idsubbarang,
+                        'kondisi'        => $d->kondisi,
+                        'jumlah'         => $d->jumlah,
+                        'qty_bermasalah' => $d->qtyBermasalah(),
+                        'catatan'        => $d->catatan,
                     ])->values();
 
                 return [

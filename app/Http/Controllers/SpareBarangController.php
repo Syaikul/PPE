@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Personel;
+use App\Models\Mobilisasi;
+use App\Models\MobilisasiPersonel;
 use App\Models\SpareBarang;
 use App\Models\SpareBarangItem;
-use App\Models\Stok;
 use App\Services\BarangVarianService;
 use App\Services\GudangContext;
 use App\Services\MasterApiService;
 use App\Services\SpareBarangService;
 use Illuminate\Http\Request;
 
+/**
+ * Spare Barang terikat ke Mobilisasi — dikelola dari halaman Data Perlengkapan MOB.
+ * Penanggung jawab & penerima pemakaian harus personel yang ikut mobilisasi tersebut.
+ */
 class SpareBarangController extends Controller
 {
     public function __construct()
@@ -19,48 +23,7 @@ class SpareBarangController extends Controller
         $this->middleware('auth');
     }
 
-    public function index($idgudang)
-    {
-        GudangContext::activate((int) $idgudang);
-
-        $gudang = MasterApiService::gudangById((int) $idgudang);
-        $barangList = MasterApiService::barangWithVarian();
-        $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
-        $varianMap = BarangVarianService::buildMap($barangList);
-        $personelMapApi = collect(MasterApiService::personel())->keyBy('idpersonel');
-
-        $stokList = Stok::where('idgudang', $idgudang)
-            ->where('qty', '>', 0)
-            ->orderBy('id')
-            ->get();
-
-        $personelList = Personel::where('idgudang', $idgudang)->get()
-            ->map(fn ($p) => [
-                'id'   => $p->id,
-                'nama' => $personelMapApi[$p->idpersonel]['namapersonel'] ?? 'Personel #'.$p->idpersonel,
-            ])
-            ->sortBy('nama')
-            ->values();
-
-        $srList = SpareBarang::with(['items.pemakaian', 'personel'])
-            ->where('idgudang', $idgudang)
-            ->latest('tanggal')
-            ->latest('id')
-            ->get();
-
-        return view('spare_barang.index', compact(
-            'idgudang',
-            'gudang',
-            'stokList',
-            'personelList',
-            'personelMapApi',
-            'srList',
-            'subBarangMap',
-            'varianMap'
-        ));
-    }
-
-    public function store(Request $request, $idgudang)
+    public function store(Request $request, $idgudang, $mobilisasiId)
     {
         GudangContext::activate((int) $idgudang);
 
@@ -73,7 +36,12 @@ class SpareBarangController extends Controller
             'items.*.qty'     => 'required|integer|min:1',
         ]);
 
-        Personel::where('idgudang', $idgudang)->findOrFail($request->personel_id);
+        $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($mobilisasiId);
+
+        if (! $this->isPesertaMob($mobilisasi, (int) $request->personel_id)) {
+            return back()->withInput()
+                ->with('error', 'Penanggung jawab spare harus personel yang ikut mobilisasi ini.');
+        }
 
         $barangList = MasterApiService::barangWithVarian();
         $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
@@ -90,14 +58,15 @@ class SpareBarangController extends Controller
             $request->no_sr,
             (int) $request->personel_id,
             $request->tanggal,
-            $request->items
+            $request->items,
+            $mobilisasi->id
         );
 
-        return redirect()->route('gudang.spare-barang', $idgudang)
+        return redirect()->route('gudang.mobilisasi.perlengkapan', [$idgudang, $mobilisasi->id])
             ->with('success', 'Spare barang berhasil dibuat. Stok gudang telah dikurangi.');
     }
 
-    public function pakai(Request $request, $idgudang, $id)
+    public function pakai(Request $request, $idgudang, $mobilisasiId, $srId)
     {
         GudangContext::activate((int) $idgudang);
 
@@ -108,12 +77,18 @@ class SpareBarangController extends Controller
             'catatan'              => 'nullable|string',
         ]);
 
-        $sr = SpareBarang::where('idgudang', $idgudang)->findOrFail($id);
+        $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($mobilisasiId);
+
+        $sr = SpareBarang::where('idgudang', $idgudang)
+            ->where('mobilisasi_id', $mobilisasi->id)
+            ->findOrFail($srId);
 
         $item = SpareBarangItem::where('spare_barang_id', $sr->id)
             ->findOrFail($request->spare_barang_item_id);
 
-        Personel::where('idgudang', $idgudang)->findOrFail($request->personel_id);
+        if (! $this->isPesertaMob($mobilisasi, (int) $request->personel_id)) {
+            return back()->with('error', 'Penerima spare harus personel yang ikut mobilisasi ini.');
+        }
 
         try {
             SpareBarangService::ajukanPemakaian(
@@ -126,15 +101,20 @@ class SpareBarangController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return redirect()->route('gudang.spare-barang', $idgudang)
+        return redirect()->route('gudang.mobilisasi.perlengkapan', [$idgudang, $mobilisasi->id])
             ->with('success', 'Pemakaian spare diajukan. Menunggu persetujuan di Approval Demob.');
     }
 
-    public function kembalikan($idgudang, $id)
+    public function kembalikan($idgudang, $mobilisasiId, $srId)
     {
         GudangContext::activate((int) $idgudang);
 
-        $sr = SpareBarang::with('items')->where('idgudang', $idgudang)->findOrFail($id);
+        $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($mobilisasiId);
+
+        $sr = SpareBarang::with('items')
+            ->where('idgudang', $idgudang)
+            ->where('mobilisasi_id', $mobilisasi->id)
+            ->findOrFail($srId);
 
         try {
             $total = SpareBarangService::kembalikan($sr);
@@ -142,7 +122,14 @@ class SpareBarangController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return redirect()->route('gudang.spare-barang', $idgudang)
+        return redirect()->route('gudang.mobilisasi.perlengkapan', [$idgudang, $mobilisasi->id])
             ->with('success', 'Spare barang dikembalikan. '.$total.' item ditambahkan kembali ke stok.');
+    }
+
+    private function isPesertaMob(Mobilisasi $mobilisasi, int $personelId): bool
+    {
+        return MobilisasiPersonel::where('mobilisasi_id', $mobilisasi->id)
+            ->where('personel_id', $personelId)
+            ->exists();
     }
 }

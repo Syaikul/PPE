@@ -62,8 +62,8 @@
                             <td class="fw-semibold">{{ $nama }}</td>
                             <td>{{ $posisiLabels ?: '-' }}</td>
                             <td>
-                                <span class="badge {{ $personel->status === 'Onshore' ? 'bg-primary' : 'bg-secondary' }}">
-                                    {{ $personel->status }}
+                                <span class="badge {{ $personel->status === 'Onsite' ? 'bg-primary' : 'bg-secondary' }}">
+                                    {{ $personel->status_label ?? $personel->status }}
                                 </span>
                             </td>
                             <td>
@@ -124,11 +124,11 @@
                             @endforeach
                         </div>
                     </div>
-                    <input type="hidden" name="status" value="Offshore">
+                    <input type="hidden" name="status" value="Offsite">
                     <div class="alert alert-light border small mb-0">
                         <i class="fas fa-info-circle me-1"></i>
-                        Status personel default <strong>Offshore</strong> dan hanya berubah menjadi
-                        <strong>Onshore</strong> saat dipilih untuk Mobilisasi.
+                        Status personel default <strong>Offsite</strong> dan hanya berubah menjadi
+                        <strong>Onsite</strong> saat dipilih untuk Mobilisasi.
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -166,10 +166,10 @@
                             @endforeach
                         </div>
                     </div>
-                    <input type="hidden" name="status" id="ubahStatus" value="Offshore">
+                    <input type="hidden" name="status" id="ubahStatus" value="Offsite">
                     <div class="alert alert-light border small mb-0">
                         <i class="fas fa-info-circle me-1"></i>
-                        Status (<span id="ubahStatusLabel" class="fw-semibold">Offshore</span>) diatur otomatis melalui Mobilisasi.
+                        Status (<span id="ubahStatusLabel" class="fw-semibold">Offsite</span>) diatur otomatis melalui Mobilisasi.
                     </div>
                 </div>
                 <div class="modal-footer">
