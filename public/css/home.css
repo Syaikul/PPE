@@ -1,0 +1,159 @@
+/* Halaman pilih gudang. Ditulis manual (bukan Tailwind CDN) supaya ringan dan bisa jalan tanpa internet. */
+
+:root {
+    --hg-teks: #1f2937;
+    --hg-teks-lembut: #6b7280;
+    --hg-garis: #e5e7eb;
+    --hg-aksen: #4f46e5;
+    --hg-aksen-lembut: #eef2ff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #f9fafb;
+    color: var(--hg-teks);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+.hg-main {
+    max-width: 80rem;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.hg-header {
+    text-align: center;
+    border-bottom: 1px solid var(--hg-garis);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.hg-header h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: #111827;
+}
+
+.hg-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 1.5rem;
+}
+
+.hg-kartu {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    background: #fff;
+    border: 1px solid var(--hg-garis);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.hg-kartu:hover {
+    border-color: var(--hg-aksen);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.hg-kartu-atas {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.hg-ikon {
+    display: inline-flex;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background: var(--hg-aksen-lembut);
+    color: var(--hg-aksen);
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.hg-kartu:hover .hg-ikon {
+    background: var(--hg-aksen);
+    color: #fff;
+}
+
+.hg-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    background: #f0fdf4;
+    color: #15803d;
+    box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.2);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.hg-nama {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #111827;
+    transition: color 0.2s;
+}
+
+.hg-kartu:hover .hg-nama {
+    color: var(--hg-aksen);
+}
+
+.hg-kontrak {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0.25rem 0 0;
+    font-size: 0.875rem;
+    color: var(--hg-teks-lembut);
+}
+
+.hg-kartu-bawah {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f3f4f6;
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+.hg-masuk {
+    color: #818cf8;
+    font-weight: 500;
+}
+
+.hg-kosong {
+    grid-column: 1 / -1;
+    text-align: center;
+    background: #fff;
+    border: 1px dashed #d1d5db;
+    border-radius: 0.75rem;
+    padding: 3rem;
+    color: var(--hg-teks-lembut);
+}
+
+.hg-kosong svg {
+    width: 40px;
+    height: 40px;
+    color: #d1d5db;
+}
+
+.hg-kosong p {
+    margin: 1rem 0 0;
+    font-size: 0.875rem;
+}
+
+.hg-kosong a {
+    color: var(--hg-aksen);
+}

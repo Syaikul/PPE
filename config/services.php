@@ -37,6 +37,14 @@ return [
 
     'master_api' => [
         'url' => env('MASTER_API_URL', 'http://127.0.0.1:8000'),
+
+        // Batas waktu (detik) saat menarik data master ketika sync manual.
+        'timeout' => env('MASTER_API_TIMEOUT', 30),
+
+        // Bila data master lokal belum pernah di-sync, ambil langsung dari API
+        // sekali jalan supaya aplikasi tidak kosong. Matikan (false) kalau lokasi
+        // pemakaian benar-benar tanpa internet.
+        'fallback' => env('MASTER_API_FALLBACK', true),
     ],
 
 ];

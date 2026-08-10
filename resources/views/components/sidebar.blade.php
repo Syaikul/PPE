@@ -4,7 +4,7 @@
         <!-- Logo Header -->
         <div class="logo-header" style="background-color: #e8f0ec !important; color: white;">
             <a href="index.html" class="logo">
-                <img src="https://www.mesitechmitra.co.id/assets/photos/logo-baru.png" alt="navbar brand"
+                <img src="{{ asset('images/logo-mesitech.png') }}" alt="navbar brand"
                     class="navbar-brand" height="40" />
             </a>
 
@@ -170,21 +170,13 @@
                     </a>
                 </li>
 
-                <!-- Filter -->
-                <li class="nav-item">
-                    <a href="widgets.html">
-                        <i class="fas fa-box-open"></i>
-                        <p>Filter</p>
+                <!-- Sync Data Master -->
+                <!-- <li class="nav-item">
+                    <a href="{{ route('master.sync') }}">
+                        <i class="fas fa-sync-alt"></i>
+                        <p>Sync Data Master</p>
                     </a>
-                </li>
-
-                <!-- User -->
-                <li class="nav-item">
-                    <a href="widgets.html">
-                        <i class="fas fa-user"></i>
-                        <p>User</p>
-                    </a>
-                </li>
+                </li> -->
 
             </ul>
 

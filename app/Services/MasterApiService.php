@@ -2,25 +2,54 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
+use App\Models\MasterData;
 
 /**
- * Satu pintu akses ke API master data (gudang, personel, barang, dll).
- * Ubah URL di .env: MASTER_API_URL=http://127.0.0.1:8000
+ * Satu pintu akses ke data master (gudang, personel, barang, dll).
+ *
+ * Data dibaca dari salinan lokal di tabel `master_data`, bukan dari API.
+ * Isi salinan itu lewat sync manual: `php artisan master:sync` atau menu
+ * "Sync Data Master" di aplikasi. Ubah URL API di .env: MASTER_API_URL=...
  */
 class MasterApiService
 {
+    /** Cache per-request supaya satu endpoint hanya di-decode sekali. */
+    private static array $memo = [];
+
     public static function baseUrl(): string
     {
-        return rtrim(config('services.master_api.url', 'http://127.0.0.1:8000'), '/');
+        return MasterSyncService::baseUrl();
+    }
+
+    public static function flushMemo(): void
+    {
+        self::$memo = [];
     }
 
     /** @return array<int, array<string, mixed>> */
     public static function get(string $endpoint): array
     {
-        $response = Http::get(self::baseUrl().'/api/'.ltrim($endpoint, '/'));
+        $endpoint = ltrim($endpoint, '/');
 
-        return $response->successful() ? ($response->json('data') ?? []) : [];
+        if (array_key_exists($endpoint, self::$memo)) {
+            return self::$memo[$endpoint];
+        }
+
+        $row = MasterData::where('endpoint', $endpoint)->first();
+
+        if ($row) {
+            return self::$memo[$endpoint] = $row->rows();
+        }
+
+        // Belum pernah sync: ambil langsung dari API sekali supaya aplikasi tetap
+        // bisa dipakai, tapi hasilnya tidak disimpan (sync tetap harus manual).
+        if (config('services.master_api.fallback', true)) {
+            $remote = MasterSyncService::fetchRemote($endpoint);
+
+            return self::$memo[$endpoint] = ($remote['ok'] ? $remote['rows'] : []);
+        }
+
+        return self::$memo[$endpoint] = [];
     }
 
     /** @return array<int, array<string, mixed>> */

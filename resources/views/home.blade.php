@@ -5,59 +5,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Gudang</title>
-    <!-- Menggunakan Tailwind CSS CDN untuk styling yang cepat dan modern -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- Menggunakan Lucide Icons untuk ikon yang bersih -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="icon" href="{{ asset('template') }}/assets/img/kaiadmin/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="{{ asset('css/home.css') }}">
 </head>
 
-<body class="bg-gray-50 font-sans text-gray-800 antialiased">
-    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+<body>
+    @php
+        $ikonGudang = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect width="12" height="12" x="6" y="10"/></svg>';
+    @endphp
 
-        <!-- HERO / HEADER LANDING PAGE -->
-        <div class="mb-8 border-b border-gray-200 pb-6 text-center">
-            <h1 class="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-                Daftar Gudang
-            </h1>
+    <main class="hg-main">
+
+        <div class="hg-header">
+            <h1>Daftar Gudang</h1>
         </div>
 
-        <!-- GRID KOTAK-KOTAK GUDANG -->
-        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div class="hg-grid">
             @forelse ($gudangs as $gudang)
-                <a href="{{ route('gudang.stok', $gudang['idgudang']) }}"
-                    class="group relative rounded-xl border border-gray-200 bg-white p-6 shadow-sm hover:border-indigo-500 hover:shadow-md transition-all duration-200 block no-underline">
-                    <div class="flex items-center justify-between mb-4">
-                        <div
-                            class="rounded-lg bg-indigo-50 p-2 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                            <i data-lucide="warehouse" class="h-6 w-6"></i>
-                        </div>
-                        <span
-                            class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Aktif</span>
+                <a href="{{ route('gudang.stok', $gudang['idgudang']) }}" class="hg-kartu">
+                    <div class="hg-kartu-atas">
+                        <span class="hg-ikon">{!! $ikonGudang !!}</span>
+                        <span class="hg-badge">Aktif</span>
                     </div>
-                    <h3 class="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                        {{ $gudang['namagudang'] }}
-                    </h3>
-                    <p class="mt-1 text-sm text-gray-500 flex items-center gap-1">
-                        <i data-lucide="file-text" class="h-3.5 w-3.5"></i> No Kontrak : {{ $gudang['nomorkontrak'] }}
+                    <h3 class="hg-nama">{{ $gudang['namagudang'] }}</h3>
+                    <p class="hg-kontrak">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                            <path d="M10 9H8" />
+                            <path d="M16 13H8" />
+                            <path d="M16 17H8" />
+                        </svg>
+                        No Kontrak : {{ $gudang['nomorkontrak'] }}
                     </p>
-                    <div class="mt-4 border-t border-gray-100 pt-4 flex justify-between text-xs text-gray-400">
+                    <div class="hg-kartu-bawah">
                         <span>ID: GDG-{{ str_pad($gudang['idgudang'], 3, '0', STR_PAD_LEFT) }}</span>
-                        <span class="text-indigo-400 font-medium">Masuk →</span>
+                        <span class="hg-masuk">Masuk &rarr;</span>
                     </div>
                 </a>
             @empty
-                <div class="col-span-full rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center">
-                    <i data-lucide="warehouse" class="mx-auto h-10 w-10 text-gray-300"></i>
-                    <p class="mt-4 text-sm text-gray-500">Belum ada data gudang.</p>
+                <div class="hg-kosong">
+                    {!! $ikonGudang !!}
+                    <p>
+                        Belum ada data gudang.
+                        <br>
+                        Jalankan <a href="{{ route('master.sync') }}">Sync Data Master</a> untuk menarik data dari API.
+                    </p>
                 </div>
             @endforelse
         </div>
     </main>
-
-    <!-- Script untuk merender Ikon Lucide -->
-    <script>
-        lucide.createIcons();
-    </script>
 </body>
 
 </html>

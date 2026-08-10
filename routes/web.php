@@ -11,6 +11,10 @@ Auth::routes();
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
 Route::middleware('auth')->group(function () {
+    // Sync manual data master (gudang, personel, posisi, barang, posisippe)
+    Route::get('/master-sync', [App\Http\Controllers\MasterSyncController::class, 'index'])->name('master.sync');
+    Route::post('/master-sync', [App\Http\Controllers\MasterSyncController::class, 'sync'])->name('master.sync.run');
+
     Route::get('/gudang/{idgudang}/stok', [App\Http\Controllers\StokController::class, 'index'])->name('gudang.stok');
     Route::post('/gudang/{idgudang}/stok', [App\Http\Controllers\StokController::class, 'store'])->name('gudang.stok.store');
     Route::put('/gudang/{idgudang}/stok/{id}', [App\Http\Controllers\StokController::class, 'update'])->name('gudang.stok.update');

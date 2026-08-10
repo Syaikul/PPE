@@ -34,7 +34,7 @@ class MrPdfExportService
             'projectLabel'   => $projectLabel,
             'items'          => $items,
             'emptyRows'      => $emptyRows,
-            'logoPath'       => public_path('template/assets/img/logoicon.png'),
+            'logoPath'       => public_path('template/assets/img/logo-mr.png'),
             'signaturePath'  => public_path('template/assets/img/Untitled.png'),
         ])->setPaper('a4', 'landscape');
 
