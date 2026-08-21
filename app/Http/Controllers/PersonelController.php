@@ -31,6 +31,12 @@ class PersonelController extends Controller
             ->latest()
             ->get();
 
+        $registeredPersonelIds = $personelList->pluck('idpersonel')->all();
+        $personelApiListTambah = collect($personelApiList)
+            ->filter(fn (array $p) => ! in_array((int) $p['idpersonel'], $registeredPersonelIds, true))
+            ->values()
+            ->all();
+
         // Onsite dari gudang ini => "Onsite"; dari gudang lain => "Onsite (Nama Gudang)".
         $personelList->each(function ($p) use ($idgudang, $gudangMap) {
             $label = $p->status;
@@ -51,6 +57,7 @@ class PersonelController extends Controller
             'idgudang',
             'gudang',
             'personelApiList',
+            'personelApiListTambah',
             'personelMap',
             'posisiList',
             'posisiMap',

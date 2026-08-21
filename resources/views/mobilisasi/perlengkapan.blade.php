@@ -30,11 +30,13 @@
     <div class="card shadow-sm mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0"><i class="fas fa-hard-hat me-2"></i>{{ $namaPosisi }}</h5>
+            @canCrud('mobilisasi')
             <button type="button" class="btn btn-sm btn-success btn-tambah-item"
                 data-idposisi="{{ $idposisi }}" data-posisi="{{ $namaPosisi }}"
                 data-bs-toggle="modal" data-bs-target="#modalTambahItem">
                 Tambahkan Item +
             </button>
+            @endcanCrud
         </div>
         <div class="card-body p-0">
             <table class="table table-hover align-middle mb-0">
@@ -51,6 +53,7 @@
                             <td class="ps-3 fw-semibold">{{ $subBarangMap[$item->idsubbarang]['label'] ?? 'Item #'.$item->idsubbarang }}</td>
                             <td class="text-center">{{ $item->qty }}</td>
                             <td class="text-end pe-3">
+                                @canCrud('mobilisasi')
                                 <button class="btn btn-sm btn-warning btn-edit-qty"
                                     data-id="{{ $item->id }}" data-qty="{{ $item->qty }}"
                                     data-bs-toggle="modal" data-bs-target="#modalEditQty">Edit Jumlah</button>
@@ -59,6 +62,9 @@
                                     @csrf @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger">Hapus Perlengkapan dalam Projek ini</button>
                                 </form>
+                                @else
+                                <span class="text-muted">-</span>
+                                @endcanCrud
                             </td>
                         </tr>
                     @empty
@@ -79,10 +85,12 @@
             <h5 class="card-title mb-0">
                 <i class="fas fa-plus-square me-2"></i>By Request — {{ $katLabel }}
             </h5>
+            @canCrud('mobilisasi')
             <button type="button" class="btn btn-sm btn-success btn-tambah-byrequest"
                 data-bs-toggle="modal" data-bs-target="#modalByRequest">
                 Tambahkan Item +
             </button>
+            @endcanCrud
         </div>
         <div class="card-body p-0">
             <table class="table table-hover align-middle mb-0">
@@ -109,6 +117,7 @@
                                 @if($item->untuk_user)
                                     <span class="badge bg-secondary">Sudah keluar stok — tercatat di PPE Keluar</span>
                                 @else
+                                    @canCrud('mobilisasi')
                                     <button class="btn btn-sm btn-warning btn-edit-qty"
                                         data-id="{{ $item->id }}" data-qty="{{ $item->qty }}"
                                         data-bs-toggle="modal" data-bs-target="#modalEditQty">Edit Jumlah</button>
@@ -117,6 +126,9 @@
                                         @csrf @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-danger">Hapus Perlengkapan dalam Projek ini</button>
                                     </form>
+                                    @else
+                                    <span class="text-muted">-</span>
+                                    @endcanCrud
                                 @endif
                             </td>
                         </tr>
@@ -213,9 +225,11 @@
                     <div id="spareItemsContainer"></div>
 
                     <div class="d-flex justify-content-end gap-2 mt-3">
+                        @canCrud('mobilisasi')
                         <button type="submit" class="btn btn-primary px-4">
                             <i class="fas fa-box me-1"></i> Simpan Spare Barang
                         </button>
+                        @endcanCrud
                     </div>
                 </form>
             @endif

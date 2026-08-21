@@ -4,6 +4,31 @@
 
 @section('content')
 
+<style>
+    .stok-info-warna-btn { color: #1572e8 !important; }
+    .stok-info-warna-btn:hover { color: #0d5bbf !important; text-decoration: underline !important; }
+    .stok-info-divider { height: 3px; background: #1572e8; border-radius: 2px; }
+    .stok-info-pill {
+        display: inline-block;
+        width: 72px;
+        height: 22px;
+        border-radius: 999px;
+    }
+    .stok-info-table thead th {
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        border-bottom: 1px solid #eef1f4;
+        padding-bottom: 0.75rem;
+    }
+    .stok-info-table tbody td {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #f1f3f5;
+        vertical-align: middle;
+    }
+    .stok-info-table tbody tr:last-child td { border-bottom: 0; }
+</style>
+
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ session('success') }}
@@ -29,24 +54,30 @@
             <span class="badge bg-light text-secondary border">No. Kontrak: {{ $gudang['nomorkontrak'] }}</span>
         @endif
     </div>
+    @canCrud('stok')
     <button type="button" class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalTambahStok">
         Tambah Stok
     </button>
+    @endcanCrud
 </div>
 
 <div class="card shadow-sm">
-    <div class="card-header">
-        <h4 class="card-title">Data Stok</h4>
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="card-title mb-0">Data Stok</h4>
+        <button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold stok-info-warna-btn"
+            data-bs-toggle="modal" data-bs-target="#modalInformasiWarna">
+            Informasi Warna
+        </button>
     </div>
     <div class="card-body">
         <div class="table-responsive">
             <table id="tabelStok" class="table table-hover align-middle" style="width:100%">
                 <thead>
                     <tr>
-                        <th>Kode Barang</th>
-                        <th>Barang — Varian</th>
+                        <th>Kode</th>
+                        <th>Nama Barang</th>
                         <th>Kategori</th>
-                        <th>Qty</th>
+                        <th class="text-center">Qty</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -55,6 +86,7 @@
                         @php
                             $label = \App\Services\StokItemService::labelForRow($stok, $subBarangMap, $varianMap);
                             $kode = \App\Services\StokItemService::kodeForRow($stok, $subBarangMap, $varianMap);
+                            $mm = $stokMetrics[$stok->id] ?? null;
                         @endphp
                         <tr>
                             <td><small class="text-muted">{{ $kode }}</small></td>
@@ -70,13 +102,19 @@
                                     {{ $kat }}
                                 </span>
                             </td>
-                            <td><span class="badge bg-success">{{ $stok->qty }}</span></td>
+                            <td class="text-center">
+                                <span class="badge fs-6" style="{{ $mm['badge']['style'] ?? 'background-color:#64748B;color:#fff' }}">
+                                    {{ $stok->qty }}
+                                </span>
+                            </td>
                             <td>
+                                @canCrud('stok')
                                 <button class="btn btn-sm btn-warning btn-ubah"
                                     data-id="{{ $stok->id }}"
                                     data-label="{{ $label }}"
                                     data-qty="{{ $stok->qty }}"
                                     data-kategori="{{ $stok->kategori ?? 'Consumable' }}"
+                                    data-persen="{{ $mm['persen'] ?? 10 }}"
                                     data-bs-toggle="modal" data-bs-target="#modalUbahStok">
                                     Ubah
                                 </button>
@@ -87,11 +125,48 @@
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
                                 </form>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endcanCrud
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalInformasiWarna" tabindex="-1" aria-labelledby="labelInformasiWarna" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title w-100 text-center fw-bold" id="labelInformasiWarna">Informasi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <div class="stok-info-divider mb-3"></div>
+                <div class="table-responsive">
+                    <table class="table table-borderless align-middle mb-0 stok-info-table">
+                        <thead>
+                            <tr class="text-muted text-uppercase small">
+                                <th style="width:35%">Status</th>
+                                <th>Penjelasan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach(\App\Services\StokMinMaxService::colorLegend() as $item)
+                                <tr>
+                                    <td>
+                                        <span class="stok-info-pill" style="background-color:{{ $item['color'] }}"></span>
+                                    </td>
+                                    <td class="text-muted">{{ $item['penjelasan'] }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -168,6 +243,11 @@
                         </select>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label fw-semibold">Persen Min-Max (%)</label>
+                        <input type="number" name="persen" id="ubahPersen" class="form-control" min="0" max="1000" step="0.1" required>
+                        <small class="text-muted">Min = personel × persen ({{ $personelCount }} org). Max = {{ $personelCount }} (1 unit/orang).</small>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label fw-semibold">Qty</label>
                         <input type="number" name="qty" id="ubahQty" class="form-control" min="1" required>
                     </div>
@@ -233,6 +313,7 @@
             document.getElementById('ubahLabel').value = this.dataset.label;
             document.getElementById('ubahQty').value = this.dataset.qty;
             document.getElementById('ubahKategori').value = this.dataset.kategori;
+            document.getElementById('ubahPersen').value = this.dataset.persen;
         });
     });
 </script>

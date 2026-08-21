@@ -113,6 +113,7 @@
                                         @endif
 
                                         {{-- Form tambah kedatangan --}}
+                                        @canCrud('permintaan')
                                         @if($item->sisa > 0)
                                             <h6 class="fw-semibold mb-2">Tambah Kedatangan</h6>
                                             <form action="{{ route('gudang.permintaan.kedatangan', [$idgudang, $permintaan->id, $item->id]) }}"
@@ -145,6 +146,7 @@
                                         @else
                                             <p class="text-success mb-0 small"><i class="fas fa-check-circle me-1"></i> Barang ini sudah lengkap datang.</p>
                                         @endif
+                                        @endcanCrud
 
                                     </div>
                                 </div>

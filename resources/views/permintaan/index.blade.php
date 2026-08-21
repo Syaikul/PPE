@@ -19,10 +19,12 @@
         <span class="text-muted">/</span>
         <span class="fw-semibold">{{ $gudang['namagudang'] ?? 'Gudang #'.$idgudang }}</span>
     </div>
+    @canCrud('permintaan')
     <button type="button" class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalBuatMR"
         {{ $stokList->isEmpty() ? 'disabled' : '' }}>
         Buat MR
     </button>
+    @endcanCrud
 </div>
 
 <div class="card shadow-sm">
@@ -72,6 +74,7 @@
                                 </a>
                                 <a href="{{ route('gudang.permintaan.show', [$idgudang, $mr->id]) }}"
                                     class="btn btn-sm btn-success">Detail</a>
+                                @canCrud('permintaan')
                                 <button class="btn btn-sm btn-warning btn-edit-mr"
                                     data-id="{{ $mr->id }}"
                                     data-nomor="{{ $mr->nomor_mr }}"
@@ -82,6 +85,7 @@
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger">Hapus MR</button>
                                 </form>
+                                @endcanCrud
                             </td>
                         </tr>
                     @endforeach

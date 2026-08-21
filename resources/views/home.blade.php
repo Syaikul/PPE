@@ -12,20 +12,41 @@
 <body>
     @php
         $ikonGudang = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect width="12" height="12" x="6" y="10"/></svg>';
+        $user = auth()->user();
     @endphp
 
     <main class="hg-main">
+
+        <div class="hg-topbar">
+            <div>
+                <div class="hg-user">{{ $user->name }}</div>
+                <div class="hg-role">{{ \App\Services\AccessControl::roleLabel($user->role) }} · {{ $user->gudangLabel() }}</div>
+            </div>
+            <form action="{{ route('logout') }}" method="POST">
+                @csrf
+                <button type="submit" class="hg-logout">Keluar</button>
+            </form>
+        </div>
 
         <div class="hg-header">
             <h1>Daftar Gudang</h1>
         </div>
 
+        @if(session('error'))
+            <div class="hg-alert" role="alert">{{ session('error') }}</div>
+        @endif
+
         <div class="hg-grid">
             @forelse ($gudangs as $gudang)
-                <a href="{{ route('gudang.stok', $gudang['idgudang']) }}" class="hg-kartu">
+                <a href="{{ route('gudang.enter', $gudang['idgudang']) }}"
+                    class="hg-kartu {{ empty($gudang['bisa_akses']) ? 'hg-kartu-terkunci' : '' }}">
                     <div class="hg-kartu-atas">
                         <span class="hg-ikon">{!! $ikonGudang !!}</span>
-                        <span class="hg-badge">Aktif</span>
+                        @if(! empty($gudang['bisa_akses']))
+                            <span class="hg-badge">Aktif</span>
+                        @else
+                            <span class="hg-badge hg-badge-kunci">Tidak ada akses</span>
+                        @endif
                     </div>
                     <h3 class="hg-nama">{{ $gudang['namagudang'] }}</h3>
                     <p class="hg-kontrak">
@@ -41,7 +62,7 @@
                     </p>
                     <div class="hg-kartu-bawah">
                         <span>ID: GDG-{{ str_pad($gudang['idgudang'], 3, '0', STR_PAD_LEFT) }}</span>
-                        <span class="hg-masuk">Masuk &rarr;</span>
+                        <span class="hg-masuk">{{ ! empty($gudang['bisa_akses']) ? 'Masuk →' : 'Terkunci' }}</span>
                     </div>
                 </a>
             @empty
@@ -50,7 +71,11 @@
                     <p>
                         Belum ada data gudang.
                         <br>
-                        Jalankan <a href="{{ route('master.sync') }}">Sync Data Master</a> untuk menarik data dari API.
+                        @canCrud('master_sync')
+                            Jalankan <a href="{{ route('master.sync') }}">Sync Data Master</a> untuk menarik data dari API.
+                        @else
+                            Minta SuperAdmin menjalankan Sync Data Master.
+                        @endcanCrud
                     </p>
                 </div>
             @endforelse

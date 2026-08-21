@@ -26,10 +26,12 @@
         <span class="text-muted">/</span>
         <span class="fw-semibold">{{ $gudang['namagudang'] ?? 'Gudang #'.$idgudang }}</span>
     </div>
+    @canCrud('peminjaman')
     <button type="button" class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalAjukanPinjaman"
         {{ $stokList->isEmpty() ? 'disabled' : '' }}>
         <i class="fas fa-plus me-1"></i> Ajukan Pinjaman
     </button>
+    @endcanCrud
 </div>
 
 <div class="card shadow-sm">
@@ -92,6 +94,7 @@
                                 @endif
                             </td>
                             <td>
+                                @canCrud('peminjaman')
                                 @if($isSumber && $row->isPending())
                                     <form action="{{ route('gudang.peminjaman-ppe.approve', [$idgudang, $row->id]) }}"
                                         method="POST" class="d-inline"
@@ -114,6 +117,9 @@
                                 @else
                                     <span class="text-muted">-</span>
                                 @endif
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endcanCrud
                             </td>
                         </tr>
                     @endforeach

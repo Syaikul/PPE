@@ -26,6 +26,47 @@ body {
     padding: 2rem 1rem;
 }
 
+.hg-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.hg-user {
+    font-weight: 700;
+    color: #111827;
+}
+
+.hg-role {
+    font-size: 0.875rem;
+    color: var(--hg-teks-lembut);
+    margin-top: 0.15rem;
+}
+
+.hg-logout {
+    border: 1px solid var(--hg-garis);
+    background: #fff;
+    color: #374151;
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.9rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.hg-logout:hover {
+    background: #f3f4f6;
+}
+
+.hg-alert {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    border-radius: 0.75rem;
+    padding: 0.85rem 1rem;
+    margin: -1rem 0 1.5rem;
+}
+
 .hg-header {
     text-align: center;
     border-bottom: 1px solid var(--hg-garis);
@@ -131,6 +172,26 @@ body {
 .hg-masuk {
     color: #818cf8;
     font-weight: 500;
+}
+
+.hg-kartu-terkunci {
+    background: #f9fafb;
+    opacity: 0.92;
+}
+
+.hg-kartu-terkunci:hover {
+    border-color: #f59e0b;
+    box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.15);
+}
+
+.hg-kartu-terkunci:hover .hg-nama {
+    color: #b45309;
+}
+
+.hg-badge-kunci {
+    background: #fffbeb;
+    color: #b45309;
+    box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.35);
 }
 
 .hg-kosong {

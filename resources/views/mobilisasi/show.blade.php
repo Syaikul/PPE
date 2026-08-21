@@ -73,11 +73,18 @@
                                 @if($row['mp']->submitted_at)
                                     <span class="badge bg-primary">Ter-submit</span>
                                 @else
+                                    @canCrud('mobilisasi')
                                     <a href="{{ route('gudang.mobilisasi.pengecekan', [$idgudang, $mobilisasi->id, $row['mp']->id]) }}"
                                         class="btn btn-sm {{ $row['lengkap'] ? 'btn-success' : 'btn-outline-danger' }}">
                                         {{ $row['lengkap'] ? 'Lengkap' : 'Tidak Lengkap' }}
                                         <span class="badge bg-light text-dark ms-1">{{ $row['ada'] }}/{{ $row['total'] }}</span>
                                     </a>
+                                    @else
+                                    <span class="badge {{ $row['lengkap'] ? 'bg-success' : 'bg-danger' }}">
+                                        {{ $row['lengkap'] ? 'Lengkap' : 'Tidak Lengkap' }}
+                                        {{ $row['ada'] }}/{{ $row['total'] }}
+                                    </span>
+                                    @endcanCrud
                                 @endif
                             </td>
                         </tr>
@@ -91,6 +98,7 @@
 </div>
 
 @if($bisaJalankan)
+    @canCrud('mobilisasi')
     <div class="card shadow-sm mt-3 border-primary">
         <div class="card-body d-flex justify-content-between align-items-center">
             <div>
@@ -106,6 +114,7 @@
             </form>
         </div>
     </div>
+    @endcanCrud
 @endif
 
 @endsection

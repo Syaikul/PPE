@@ -25,9 +25,11 @@
         <span class="text-muted">/</span>
         <span class="fw-semibold">{{ $gudang['namagudang'] ?? 'Gudang #'.$idgudang }}</span>
     </div>
+    @canCrud('mobilisasi')
     <a href="{{ route('gudang.mobilisasi.create', $idgudang) }}" class="btn btn-primary rounded-pill px-4">
         <i class="fas fa-plus me-1"></i> Tambah Mobilisasi
     </a>
+    @endcanCrud
 </div>
 
 <div class="card shadow-sm">
@@ -62,12 +64,14 @@
                             <td class="text-nowrap">
                                 <a href="{{ route('gudang.mobilisasi.show', [$idgudang, $mob->id]) }}"
                                     class="btn btn-sm btn-success">Detail</a>
+                                @canCrud('mobilisasi')
                                 <form action="{{ route('gudang.mobilisasi.destroy', [$idgudang, $mob->id]) }}"
                                     method="POST" class="d-inline" onsubmit="return confirm('Hapus mobilisasi ini? Personel akan kembali Offsite.')">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
                                 </form>
+                                @endcanCrud
                             </td>
                         </tr>
                     @endforeach

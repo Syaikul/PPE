@@ -119,9 +119,13 @@
                 <div id="itemsContainer"></div>
 
                 <div class="d-flex justify-content-end gap-2 mt-4">
+                    @canCrud('transfer')
                     <button type="submit" class="btn btn-primary px-4">
                         <i class="fas fa-exchange-alt me-1"></i> Transfer Barang
                     </button>
+                    @else
+                    <span class="text-muted">Anda hanya bisa melihat stok. Transfer hanya untuk AdminPPE dan SuperAdmin.</span>
+                    @endcanCrud
                 </div>
             </form>
         @endif

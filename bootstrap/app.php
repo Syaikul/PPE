@@ -13,6 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Supaya Laravel mengenali HTTPS/host asli saat diakses lewat ngrok/reverse proxy.
         $middleware->trustProxies(at: '*');
+
+        $middleware->alias([
+            'access' => \App\Http\Middleware\CheckAccess::class,
+        ]);
+
+        $middleware->appendToGroup('web', \App\Http\Middleware\CheckAccess::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

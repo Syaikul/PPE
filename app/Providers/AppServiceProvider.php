@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\GudangContext;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -27,6 +28,9 @@ class AppServiceProvider extends ServiceProvider
         if (! $this->app->runningInConsole()) {
             URL::forceRootUrl(request()->getSchemeAndHttpHost());
         }
+
+        Blade::if('canView', fn (string $module) => auth()->user()?->canView($module));
+        Blade::if('canCrud', fn (string $module) => auth()->user()?->canCrud($module));
 
         View::composer('layouts.kai', function ($view) {
             GudangContext::ensureNamagudangInSession();

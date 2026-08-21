@@ -63,6 +63,7 @@
                                     <span class="profile-username">
                                         <span class="op-7">Hi,</span>
                                         <span class="fw-bold">{{ auth()->user()->name }}</span>
+                                        <span class="d-block small op-7">{{ \App\Services\AccessControl::roleLabel(auth()->user()->role) }}</span>
                                     </span>
                                 </a>
                                 <ul class="dropdown-menu dropdown-user animated fadeIn">
@@ -75,9 +76,8 @@
                                                 </div>
                                                 <div class="u-text">
                                                     <h4>{{ auth()->user()->name }}</h4>
-                                                    <p class="text-muted">{{ auth()->user()->email }}</p>
-                                                    <a href="profile.html" class="btn btn-xs btn-secondary btn-sm">View
-                                                        Profile</a>
+                                                    <p class="text-muted mb-1">{{ auth()->user()->email }}</p>
+                                                    <p class="small mb-0">{{ \App\Services\AccessControl::roleLabel(auth()->user()->role) }}</p>
                                                 </div>
                                             </div>
                                         </li>

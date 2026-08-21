@@ -29,9 +29,11 @@
             <span class="badge bg-light text-secondary border">No. Kontrak: {{ $gudang['nomorkontrak'] }}</span>
         @endif
     </div>
+    @canCrud('personel')
     <button type="button" class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalTambahPersonel">
         Tambah Personel
     </button>
+    @endcanCrud
 </div>
 
 <div class="card shadow-sm">
@@ -67,6 +69,7 @@
                                 </span>
                             </td>
                             <td>
+                                @canCrud('personel')
                                 <button class="btn btn-sm btn-warning btn-ubah"
                                     data-id="{{ $personel->id }}"
                                     data-status="{{ $personel->status }}"
@@ -81,6 +84,9 @@
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
                                 </form>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endcanCrud
                             </td>
                         </tr>
                     @endforeach
@@ -103,12 +109,15 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Nama Personel</label>
-                        <select name="idpersonel" class="form-select" required>
+                        <select name="idpersonel" class="form-select" required {{ empty($personelApiListTambah) ? 'disabled' : '' }}>
                             <option value="" disabled selected>— Pilih Personel —</option>
-                            @foreach($personelApiList as $p)
+                            @foreach($personelApiListTambah as $p)
                                 <option value="{{ $p['idpersonel'] }}">{{ $p['namapersonel'] }}</option>
                             @endforeach
                         </select>
+                        @if(empty($personelApiListTambah))
+                            <small class="text-muted d-block mt-1">Semua personel master sudah terdaftar di gudang ini.</small>
+                        @endif
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Posisi <small class="text-muted">(bisa lebih dari 1)</small></label>
@@ -133,7 +142,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">Simpan</button>
+                    <button type="submit" class="btn btn-primary" {{ empty($personelApiListTambah) ? 'disabled' : '' }}>Simpan</button>
                 </div>
             </form>
         </div>

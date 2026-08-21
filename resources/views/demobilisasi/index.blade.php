@@ -96,6 +96,7 @@
                                 @endif
                             </td>
                             <td class="text-end pe-3">
+                                @canCrud('demobilisasi')
                                 @if($mp->demob_status === null)
                                     <form action="{{ route('gudang.demobilisasi.selesaikan', [$idgudang, $mob->id, $mp->id]) }}"
                                         method="POST" onsubmit="return confirm('Selesaikan (demob) personel ini? Personel akan OffSite.')">
@@ -110,6 +111,15 @@
                                 @else
                                     <span class="badge bg-success">Selesai</span>
                                 @endif
+                                @else
+                                    @if($mp->demob_status === 'menunggu_approval')
+                                        <span class="badge bg-warning text-dark">Menunggu Approval</span>
+                                    @elseif($mp->demob_status === 'selesai')
+                                        <span class="badge bg-success">Selesai</span>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                @endcanCrud
                             </td>
                         </tr>
                     @endforeach

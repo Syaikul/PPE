@@ -35,6 +35,14 @@ return [
         ],
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL').'/auth/google/callback'),
+        // Contoh: perusahaan.com — kosongkan kalau semua domain Google boleh (asal email sudah didaftarkan SuperAdmin).
+        'hd' => env('GOOGLE_WORKSPACE_DOMAIN'),
+    ],
+
     'master_api' => [
         'url' => env('MASTER_API_URL', 'http://127.0.0.1:8000'),
 

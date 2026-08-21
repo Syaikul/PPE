@@ -3,7 +3,7 @@
 
         <!-- Logo Header -->
         <div class="logo-header" style="background-color: #e8f0ec !important; color: white;">
-            <a href="index.html" class="logo">
+            <a href="{{ route('home') }}" class="logo">
                 <img src="{{ asset('images/logo-mesitech.png') }}" alt="navbar brand"
                     class="navbar-brand" height="40" />
             </a>
@@ -31,14 +31,13 @@
 
             <ul class="nav nav-secondary">
 
-                <!-- Dashboard -->
                 <li class="nav-item">
-    <a href="/dashboard">
-        <i class="fas fa-home"></i>
-        <p>Dashboard</p>
-    </a>
-</li>
-                <!-- Data Stok -->
+                    <a href="/dashboard">
+                        <i class="fas fa-home"></i>
+                        <p>Dashboard</p>
+                    </a>
+                </li>
+
                 <li class="nav-item">
                     <a data-bs-toggle="collapse" href="#datastok" class="collapsed" aria-expanded="false">
                         <i class="fas fa-desktop"></i>
@@ -48,39 +47,32 @@
 
                     <div class="collapse" id="datastok">
                         <ul class="nav nav-collapse">
-
                             <li>
                                 <a href="{{ session('idgudang') ? route('gudang.ppe-masuk', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">PPE Masuk</span>
                                 </a>
                             </li>
-
                             <li>
                                 <a href="{{ session('idgudang') ? route('gudang.ppe-keluar', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">PPE Keluar</span>
                                 </a>
                             </li>
-
                             <li>
                                 <a href="{{ session('idgudang') ? route('gudang.stok', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Stok</span>
                                 </a>
                             </li>
-
                             <li>
                                 <a href="{{ session('idgudang') ? route('gudang.transfer-barang', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Transfer Barang</span>
                                 </a>
                             </li>
-
                         </ul>
                     </div>
                 </li>
 
-                <!-- Personel -->
                 <li class="nav-item">
                     <a data-bs-toggle="collapse" href="#personel" class="collapsed" aria-expanded="false">
-
                         <i class="fas fa-users"></i>
                         <p>Personel</p>
                         <span class="caret"></span>
@@ -88,27 +80,23 @@
 
                     <div class="collapse" id="personel">
                         <ul class="nav nav-collapse">
-
                             <li>
                                 <a href="{{ session('idgudang') ? route('gudang.personel', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Data Personel</span>
                                 </a>
                             </li>
-
                             <li>
                                 <a href="{{ session('idgudang') ? route('gudang.pemakaian-ppe', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Data Pemakaian PPE</span>
                                 </a>
                             </li>
-
                         </ul>
                     </div>
                 </li>
 
-                <!-- Permintaan PPE -->
+                @if(auth()->user()->canView('permintaan') || auth()->user()->canCrud('permintaan_buat'))
                 <li class="nav-item">
                     <a data-bs-toggle="collapse" href="#permintaanppe" class="collapsed" aria-expanded="false">
-
                         <i class="fas fa-clipboard-list"></i>
                         <p>Permintaan PPE</p>
                         <span class="caret"></span>
@@ -116,11 +104,13 @@
 
                     <div class="collapse" id="permintaanppe">
                         <ul class="nav nav-collapse">
+                            @canCrud('permintaan_buat')
                             <li>
                                 <a href="{{ session('idgudang') ? route('gudang.permintaan-ppe.create', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Buat Tabel Permintaan</span>
                                 </a>
                             </li>
+                            @endcanCrud
                             <li>
                                 <a href="{{ session('idgudang') ? route('gudang.permintaan', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Data Permintaan</span>
@@ -129,11 +119,10 @@
                         </ul>
                     </div>
                 </li>
+                @endif
 
-                <!-- Mob-Demob -->
                 <li class="nav-item">
                     <a data-bs-toggle="collapse" href="#mobdemob" class="collapsed" aria-expanded="false">
-
                         <i class="fas fa-truck"></i>
                         <p>Mob-Demob</p>
                         <span class="caret"></span>
@@ -141,28 +130,27 @@
 
                     <div class="collapse" id="mobdemob">
                         <ul class="nav nav-collapse">
+                            @canCrud('approval_demob')
                             <li>
                                 <a href="{{ session('idgudang') ? route('gudang.approval-demob', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Approval Demob</span>
                                 </a>
                             </li>
+                            @endcanCrud
                             <li>
                                 <a href="{{ session('idgudang') ? route('gudang.mobilisasi', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Mobilisasi</span>
                                 </a>
                             </li>
-
                             <li>
                                 <a href="{{ session('idgudang') ? route('gudang.demobilisasi', session('idgudang')) : route('home') }}">
                                     <span class="sub-item">Demobilisasi</span>
                                 </a>
                             </li>
-
                         </ul>
                     </div>
                 </li>
 
-                <!-- Peminjaman PPE -->
                 <li class="nav-item">
                     <a href="{{ session('idgudang') ? route('gudang.peminjaman-ppe', session('idgudang')) : route('home') }}">
                         <i class="fas fa-handshake"></i>
@@ -170,13 +158,23 @@
                     </a>
                 </li>
 
-                <!-- Sync Data Master -->
-                <!-- <li class="nav-item">
+                @canCrud('master_sync')
+                <li class="nav-item">
                     <a href="{{ route('master.sync') }}">
                         <i class="fas fa-sync-alt"></i>
                         <p>Sync Data Master</p>
                     </a>
-                </li> -->
+                </li>
+                @endcanCrud
+
+                @canCrud('users')
+                <li class="nav-item">
+                    <a href="{{ route('users.index') }}">
+                        <i class="fas fa-user-shield"></i>
+                        <p>Kelola Akun &amp; Role</p>
+                    </a>
+                </li>
+                @endcanCrud
 
             </ul>
 
