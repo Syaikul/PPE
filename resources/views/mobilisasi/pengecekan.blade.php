@@ -65,72 +65,58 @@
                 <tbody>
                     @forelse($items as $item)
                         <tr>
-                            <td class="ps-3 fw-semibold">{{ $item['label'] }}</td>
-                            <td class="text-center">{{ $item['jumlah'] }}</td>
-                            <td class="text-center">
-                                @if($item['status'] === 'ada' && !empty($item['varian_label']))
-                                    <small class="text-muted d-block">{{ $item['varian_label'] }}</small>
-                                @elseif($item['status'] === 'ada' || ($item['from_keluar'] ?? false))
-                                    <span class="text-muted">-</span>
-                                @elseif(($item['issue_qty'] ?? 0) <= 0)
-                                    <span class="text-muted">-</span>
-                                @elseif(empty($item['varian_options']))
-                                    <span class="badge bg-danger">Tidak ada varian</span>
-                                @elseif(! ($item['stok_in_table'] ?? false))
-                                    <span class="badge bg-danger">Belum di stok</span>
-                                @elseif(! ($item['stok_ok'] ?? false))
-                                    <span class="badge bg-warning text-dark">Stok kurang</span>
-                                @elseif(count($item['varian_options']) === 1)
-                                    <small class="text-muted d-block">{{ $item['varian_options'][0]['label'] }}</small>
-                                    <span class="badge bg-success">Stok: {{ $item['varian_options'][0]['stok'] }}</span>
-                                @else
-                                    <span class="badge bg-success">{{ count($item['varian_options']) }} varian</span>
+                            <td class="ps-3">
+                                <div class="fw-semibold">{{ $item['label'] }}</div>
+                                @if(! empty($item['shortage_note']))
+                                    <small class="d-block text-danger mt-1">{{ $item['shortage_note'] }}</small>
+                                @elseif(($item['from_keluar'] ?? false) && ($item['owned_qty'] ?? 0) > 0)
+                                    <small class="d-block text-muted mt-1">Sudah punya {{ $item['owned_qty'] }} pcs (masih layak).</small>
                                 @endif
                             </td>
                             <td class="text-center">
-                                @if($item['status'] === 'ada')
-                                    @if($item['from_keluar'] ?? false)
-                                        <span class="btn btn-sm btn-success px-3 disabled">Ada</span>
-                                        <small class="d-block text-muted mt-1">Sudah punya</small>
-                                    @else
-                                        <form action="{{ route('gudang.mobilisasi.pengecekan.update', [$idgudang, $mobilisasi->id, $mp->id]) }}"
-                                            method="POST" class="d-inline">
-                                            @csrf @method('PUT')
-                                            <input type="hidden" name="idsubbarang" value="{{ $item['idsubbarang'] }}">
-                                            <input type="hidden" name="action" value="tidak">
-                                            <button type="submit" {{ $mp->submitted_at ? 'disabled' : '' }}
-                                                class="btn btn-sm btn-success px-3">Ada</button>
-                                        </form>
-                                        @if(!empty($item['varian_label']))
-                                            <small class="d-block text-muted mt-1">{{ $item['varian_label'] }}</small>
-                                        @endif
-                                    @endif
-                                @elseif(($item['issue_qty'] ?? 0) <= 0)
-                                    <form action="{{ route('gudang.mobilisasi.pengecekan.update', [$idgudang, $mobilisasi->id, $mp->id]) }}"
-                                        method="POST" class="d-inline">
-                                        @csrf @method('PUT')
-                                        <input type="hidden" name="idsubbarang" value="{{ $item['idsubbarang'] }}">
-                                        <input type="hidden" name="action" value="ada">
-                                        <button type="submit" {{ $mp->submitted_at ? 'disabled' : '' }}
-                                            class="btn btn-sm btn-outline-success px-3">Tandai Ada</button>
-                                    </form>
-                                @elseif(! ($item['stok_ok'] ?? true))
-                                    <div>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary px-3" disabled>Tambahkan +</button>
-                                        <div class="mt-1">
-                                            <a href="{{ route('gudang.stok', $idgudang) }}" class="badge bg-light text-dark border text-decoration-none">+ Stok</a>
-                                            <a href="{{ route('gudang.permintaan', $idgudang) }}" class="badge bg-light text-dark border text-decoration-none">Buat MR</a>
-                                        </div>
-                                    </div>
+                                {{ $item['jumlah'] }}
+                                @if(($item['issue_qty'] ?? 0) > 0 && ($item['owned_qty'] ?? 0) > 0)
+                                    <small class="d-block text-muted">Punya {{ $item['owned_qty'] }} · Kurang {{ $item['issue_qty'] }}</small>
+                                @elseif(($item['issue_qty'] ?? 0) > 0)
+                                    <small class="d-block text-muted">Kurang {{ $item['issue_qty'] }}</small>
+                                @endif
+                            </td>
+                            <td class="text-center">
+                                @if(($item['issue_qty'] ?? 0) > 0 && empty($item['varian_options']))
+                                    <span class="badge bg-danger">Tidak ada varian</span>
+                                @elseif(($item['issue_qty'] ?? 0) > 0 && ! ($item['stok_in_table'] ?? false))
+                                    <span class="badge bg-danger">Belum di stok</span>
+                                @elseif(($item['issue_qty'] ?? 0) > 0 && ! ($item['stok_ok'] ?? false))
+                                    <span class="badge bg-warning text-dark">Stok kurang</span>
+                                @elseif(($item['issue_qty'] ?? 0) > 0 && count($item['varian_options']) === 1)
+                                    <small class="text-muted d-block">{{ $item['varian_options'][0]['label'] }}</small>
+                                    <span class="badge bg-success">Stok: {{ $item['varian_options'][0]['stok'] }}</span>
+                                @elseif(($item['issue_qty'] ?? 0) > 0)
+                                    <span class="badge bg-success">{{ count($item['varian_options']) }} varian</span>
+                                @elseif($item['status'] === 'ada' && !empty($item['varian_label']))
+                                    <small class="text-muted d-block">{{ $item['varian_label'] }}</small>
                                 @else
-                                    @if(count($item['varian_options']) === 1)
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </td>
+                            <td class="text-center">
+                                @if(($item['issue_qty'] ?? 0) > 0)
+                                    @if(! ($item['stok_ok'] ?? true))
+                                        <div>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary px-3" disabled>Tambahkan +</button>
+                                            <div class="mt-1">
+                                                <a href="{{ route('gudang.stok', $idgudang) }}" class="badge bg-light text-dark border text-decoration-none">+ Stok</a>
+                                                <a href="{{ route('gudang.permintaan', $idgudang) }}" class="badge bg-light text-dark border text-decoration-none">Buat MR</a>
+                                            </div>
+                                        </div>
+                                    @elseif(count($item['varian_options']) === 1)
                                         <form action="{{ route('gudang.mobilisasi.pengecekan.update', [$idgudang, $mobilisasi->id, $mp->id]) }}"
                                             method="POST" class="d-inline">
                                             @csrf @method('PUT')
                                             <input type="hidden" name="idsubbarang" value="{{ $item['idsubbarang'] }}">
                                             <input type="hidden" name="action" value="ada">
                                             @if(empty($item['varian_options'][0]['is_sub_level']))
-                                                <input type="hidden" name="idbarangvarian" value="{{ $item['varian_options'][0]['idvarian'] }}">
+                                                <input type="hidden" name="idbarangvarian" value="{{ $item['suggested_varian_id'] ?: $item['varian_options'][0]['idvarian'] }}">
                                             @endif
                                             <button type="submit" {{ $mp->submitted_at ? 'disabled' : '' }}
                                                 class="btn btn-sm btn-outline-success px-3">Tambahkan +</button>
@@ -142,10 +128,30 @@
                                             data-idsubbarang="{{ $item['idsubbarang'] }}"
                                             data-label="{{ $item['label'] }}"
                                             data-issue-qty="{{ $item['issue_qty'] }}"
+                                            data-needed-qty="{{ $item['jumlah'] }}"
+                                            data-owned-qty="{{ $item['owned_qty'] ?? 0 }}"
+                                            data-suggested-varian="{{ $item['suggested_varian_id'] ?? '' }}"
+                                            data-previous-note="{{ $item['previous_varian_note'] ?? '' }}"
                                             data-varian-options='@json($item['varian_options'])'>
                                             Tambahkan +
                                         </button>
                                     @endif
+                                @elseif($item['status'] === 'ada' || ($item['from_keluar'] ?? false))
+                                    <span class="btn btn-sm btn-success px-3 disabled">Ada</span>
+                                    @if($item['from_keluar'] ?? false)
+                                        <small class="d-block text-muted mt-1">Sudah punya</small>
+                                    @elseif(!empty($item['varian_label']))
+                                        <small class="d-block text-muted mt-1">{{ $item['varian_label'] }}</small>
+                                    @endif
+                                @else
+                                    <form action="{{ route('gudang.mobilisasi.pengecekan.update', [$idgudang, $mobilisasi->id, $mp->id]) }}"
+                                        method="POST" class="d-inline">
+                                        @csrf @method('PUT')
+                                        <input type="hidden" name="idsubbarang" value="{{ $item['idsubbarang'] }}">
+                                        <input type="hidden" name="action" value="ada">
+                                        <button type="submit" {{ $mp->submitted_at ? 'disabled' : '' }}
+                                            class="btn btn-sm btn-outline-success px-3">Tandai Ada</button>
+                                    </form>
                                 @endif
                             </td>
                             <td>{{ $item['catatan'] ?: '-' }}</td>
@@ -174,7 +180,10 @@
                 <div class="modal-body">
                     <p class="mb-1 text-muted small">Sub Barang</p>
                     <p class="fw-bold" id="modalSubLabel">-</p>
-                    <p class="mb-3 small">Kebutuhan: <strong id="modalIssueQty">-</strong> unit</p>
+                    <p class="mb-1 small">Kebutuhan posisi: <strong id="modalNeededQty">-</strong> unit</p>
+                    <p class="mb-1 small" id="modalOwnedWrap" hidden>Sudah punya: <strong id="modalOwnedQty">-</strong> unit</p>
+                    <p class="mb-2 small">Dikeluarkan sekarang: <strong id="modalIssueQty">-</strong> unit</p>
+                    <div id="modalPreviousNote" class="alert alert-info py-2 small mb-3" hidden></div>
 
                     <label class="form-label fw-semibold">Varian yang dikeluarkan <span class="text-danger">*</span></label>
                     <select name="idbarangvarian" id="modalVarianSelect" class="form-select" required>
@@ -214,25 +223,54 @@
             var idsub = this.dataset.idsubbarang;
             var label = this.dataset.label;
             var issueQty = parseInt(this.dataset.issueQty, 10);
+            var neededQty = parseInt(this.dataset.neededQty || issueQty, 10);
+            var ownedQty = parseInt(this.dataset.ownedQty || '0', 10);
+            var suggestedVarian = this.dataset.suggestedVarian || '';
+            var previousNote = this.dataset.previousNote || '';
             var options = JSON.parse(this.dataset.varianOptions || '[]');
 
             document.getElementById('modalIdSubBarang').value = idsub;
             document.getElementById('modalSubLabel').textContent = label;
+            document.getElementById('modalNeededQty').textContent = neededQty;
             document.getElementById('modalIssueQty').textContent = issueQty;
+
+            var ownedWrap = document.getElementById('modalOwnedWrap');
+            document.getElementById('modalOwnedQty').textContent = ownedQty;
+            ownedWrap.hidden = !(ownedQty > 0);
+
+            var prevEl = document.getElementById('modalPreviousNote');
+            if (previousNote) {
+                prevEl.textContent = previousNote;
+                prevEl.hidden = false;
+            } else {
+                prevEl.textContent = '';
+                prevEl.hidden = true;
+            }
 
             var select = document.getElementById('modalVarianSelect');
             select.innerHTML = '<option value="" disabled selected>— Pilih Varian —</option>';
 
             var hasSelectable = false;
+            var suggestedSelectable = false;
             options.forEach(function (opt) {
                 var ok = opt.stok >= issueQty;
                 var el = document.createElement('option');
                 el.value = opt.idvarian;
-                el.textContent = opt.label + ' — Stok: ' + opt.stok + (ok ? '' : ' (kurang)');
+                var isSuggested = suggestedVarian && String(opt.idvarian) === String(suggestedVarian);
+                el.textContent = opt.label + ' — Stok: ' + opt.stok
+                    + (ok ? '' : ' (kurang)')
+                    + (isSuggested ? ' (varian sebelumnya)' : '');
                 el.disabled = !ok;
                 if (ok) hasSelectable = true;
+                if (ok && isSuggested) {
+                    el.selected = true;
+                    suggestedSelectable = true;
+                }
                 select.appendChild(el);
             });
+            if (!suggestedSelectable) {
+                select.selectedIndex = 0;
+            }
 
             var hint = document.getElementById('modalVarianHint');
             var submitBtn = document.getElementById('modalBtnSubmit');

@@ -71,6 +71,11 @@ class MobilisasiController extends Controller
             ->all();
 
         // Hanya personel Offsite — status disinkronkan lintas gudang via idpersonel.
+        Personel::where('idgudang', $idgudang)
+            ->pluck('idpersonel')
+            ->unique()
+            ->each(fn ($idpersonel) => PersonelStatusService::resyncOne((int) $idpersonel));
+
         $personelList = Personel::with('posisi')
             ->where('idgudang', $idgudang)
             ->where('status', PersonelStatusService::STATUS_OFFSITE)
@@ -190,9 +195,15 @@ class MobilisasiController extends Controller
             $this->applyAutoKeluarStatus($mp, $expected, $kategoriMap);
             $mp->load('pengecekan');
 
-            $adaCount = $mp->pengecekan->where('status', 'ada')
-                ->whereIn('idsubbarang', array_keys($expected))
-                ->count();
+            $idpersonel = (int) $mp->personel->idpersonel;
+            $adaCount = 0;
+            foreach ($expected as $idsub => $jumlah) {
+                $isConsumable = ($kategoriMap[$idsub] ?? 'Non Consumable') === 'Consumable';
+                $status = $mp->pengecekan->firstWhere('idsubbarang', $idsub)?->status ?? 'tidak';
+                if ($this->itemIsComplete($idpersonel, (int) $idsub, (int) $jumlah, $isConsumable, $status)) {
+                    $adaCount++;
+                }
+            }
 
             $total = count($expected);
             $lengkap = $total > 0 && $adaCount >= $total;
@@ -221,21 +232,25 @@ class MobilisasiController extends Controller
 
     public function destroy($idgudang, $id)
     {
-        $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($id);
+        $mobilisasi = Mobilisasi::with('personel.personel')->where('idgudang', $idgudang)->findOrFail($id);
 
-        // Kembalikan personel ke Offsite.
         DB::transaction(function () use ($mobilisasi) {
-            foreach ($mobilisasi->personel as $mp) {
-                $mp->load('personel');
-                if ($mp->personel) {
-                    PersonelStatusService::syncOffsite($mp->personel->idpersonel);
-                }
-            }
+            $idpersonels = $mobilisasi->personel
+                ->map(fn ($mp) => $mp->personel?->idpersonel)
+                ->filter()
+                ->unique()
+                ->all();
+
+            // Hapus dulu supaya syncOffsite tidak menganggap draft ini masih mobilisasi aktif.
             $mobilisasi->delete();
+
+            foreach ($idpersonels as $idpersonel) {
+                PersonelStatusService::syncOffsite((int) $idpersonel);
+            }
         });
 
         return redirect()->route('gudang.mobilisasi', $idgudang)
-            ->with('success', 'Mobilisasi dihapus.');
+            ->with('success', 'Mobilisasi dihapus. Personel dikembalikan ke Offsite.');
     }
 
     /* ---------------------------------------------------------------------
@@ -541,8 +556,13 @@ class MobilisasiController extends Controller
         }
 
         $nama = $personelMapApi[$mp->personel->idpersonel]['namapersonel'] ?? 'Personel #'.$mp->personel_id;
-        $lengkap = count($expected) > 0 && collect($expected)->keys()->every(
-            fn ($idsub) => ($pengecekan[$idsub]->status ?? 'tidak') === 'ada'
+        $lengkap = count($expected) > 0 && collect($expected)->every(
+            function ($jumlah, $idsub) use ($pengecekan, $kategoriMap, $idpersonel) {
+                $isConsumable = ($kategoriMap[$idsub] ?? 'Non Consumable') === 'Consumable';
+                $status = $pengecekan[$idsub]->status ?? 'tidak';
+
+                return $this->itemIsComplete($idpersonel, (int) $idsub, (int) $jumlah, $isConsumable, $status);
+            }
         );
 
         return view('mobilisasi.pengecekan', compact(
@@ -677,7 +697,7 @@ class MobilisasiController extends Controller
     public function submitPersonel($idgudang, $id, $personelId)
     {
         $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($id);
-        $mp = MobilisasiPersonel::with('posisi', 'pengecekan')
+        $mp = MobilisasiPersonel::with('posisi', 'pengecekan', 'personel')
             ->where('mobilisasi_id', $mobilisasi->id)
             ->findOrFail($personelId);
 
@@ -686,12 +706,19 @@ class MobilisasiController extends Controller
         $expected = $this->expectedItemsFor($mp, $allocationByPosisi, $byRequestByMp, $this->mandatoryPosisiId());
 
         $pengecekan = $mp->pengecekan->keyBy('idsubbarang');
-        $lengkap = count($expected) > 0 && collect($expected)->keys()->every(
-            fn ($idsub) => ($pengecekan[$idsub]->status ?? 'tidak') === 'ada'
+        [, $kategoriMap] = $this->fetchSubBarangData($idgudang);
+        $idpersonel = (int) $mp->personel->idpersonel;
+        $lengkap = count($expected) > 0 && collect($expected)->every(
+            function ($jumlah, $idsub) use ($pengecekan, $kategoriMap, $idpersonel) {
+                $isConsumable = ($kategoriMap[$idsub] ?? 'Non Consumable') === 'Consumable';
+                $status = $pengecekan[$idsub]->status ?? 'tidak';
+
+                return $this->itemIsComplete($idpersonel, (int) $idsub, (int) $jumlah, $isConsumable, $status);
+            }
         );
 
         if (! $lengkap) {
-            return back()->with('error', 'Belum bisa submit, masih ada PPE yang belum "Ada".');
+            return back()->with('error', 'Belum bisa submit. Masih ada PPE yang jumlahnya kurang dari kebutuhan.');
         }
 
         $mp->update(['submitted_at' => now()]);
@@ -822,8 +849,8 @@ class MobilisasiController extends Controller
     }
 
     /**
-     * Tandai "Ada" otomatis untuk item NON CONSUMABLE yang sudah dimiliki personel
-     * (lintas gudang, berdasarkan idpersonel) dan kondisinya masih layak.
+     * Tandai "Ada" otomatis HANYA bila qty milik personel sudah memenuhi kebutuhan.
+     * Kalau sisa 2 dari kebutuhan 3, status tetap "tidak" supaya pengecekan tidak lengkap.
      */
     private function applyAutoKeluarStatus(MobilisasiPersonel $mp, array $expected, Collection $kategoriMap): void
     {
@@ -831,15 +858,23 @@ class MobilisasiController extends Controller
 
         foreach ($expected as $idsub => $jumlah) {
             if (($kategoriMap[$idsub] ?? 'Non Consumable') === 'Consumable') {
-                continue; // consumable tidak dilacak kepemilikan
+                continue;
             }
 
-            if (PpeOwnershipService::owns($idpersonel, (int) $idsub, $jumlah)) {
-                MobilisasiPengecekan::where('mobilisasi_personel_id', $mp->id)
-                    ->where('idsubbarang', $idsub)
-                    ->update(['status' => 'ada']);
-            }
+            $penuh = PpeOwnershipService::owns($idpersonel, (int) $idsub, (int) $jumlah);
+            MobilisasiPengecekan::where('mobilisasi_personel_id', $mp->id)
+                ->where('idsubbarang', $idsub)
+                ->update(['status' => $penuh ? 'ada' : 'tidak']);
         }
+    }
+
+    private function itemIsComplete(int $idpersonel, int $idsub, int $jumlah, bool $isConsumable, string $status): bool
+    {
+        if ($isConsumable) {
+            return $status === 'ada';
+        }
+
+        return PpeOwnershipService::owns($idpersonel, $idsub, $jumlah);
     }
 
     private function mandatoryPosisiId(): ?int
@@ -863,20 +898,63 @@ class MobilisasiController extends Controller
 
     private function enrichPengecekanRow(array $row, int $idsub, int $jumlah, int $idpersonel, bool $isConsumable, Collection $subBarangMap, Collection $varianMap, int $idgudang): array
     {
-        $issueQty = ($row['status'] === 'ada' || ($row['from_keluar'] ?? false))
-            ? 0
-            : $this->calcIssueQty($idsub, $jumlah, $idpersonel, $isConsumable);
+        $ownedQty = $isConsumable ? 0 : PpeOwnershipService::ownedUsableQty($idpersonel, $idsub);
+        $lostQty = $isConsumable ? 0 : PpeOwnershipService::lostQty($idpersonel, $idsub);
+        $issueQty = $this->calcIssueQty($idsub, $jumlah, $idpersonel, $isConsumable);
+
+        // Status "ada" tidak boleh menyembunyikan kekurangan qty.
+        if (! $isConsumable && $issueQty > 0) {
+            $row['status'] = 'tidak';
+            $row['from_keluar'] = false;
+        }
 
         $varianOptions = $this->buildVarianChoices($idgudang, $idsub, $subBarangMap, $varianMap);
+        $previous = $this->previousVarianInfo($idpersonel, $idsub, $subBarangMap, $varianMap);
 
-        $row['issue_qty']       = $issueQty;
-        $row['varian_options']  = $varianOptions;
-        $row['stok_in_table']   = collect($varianOptions)->contains(fn ($v) => $v['in_stok']);
-        $row['stok_ok']         = $issueQty <= 0
+        $row['owned_qty']            = $ownedQty;
+        $row['lost_qty']             = $lostQty;
+        $row['issue_qty']            = $issueQty;
+        $row['shortage_note']        = (! $isConsumable && $issueQty > 0)
+            ? PpeOwnershipService::shortageNote($idpersonel, $idsub, $jumlah)
+            : null;
+        $row['previous_varian_note'] = $previous['note'];
+        $row['suggested_varian_id']  = $previous['suggested_id'];
+        $row['varian_options']       = $varianOptions;
+        $row['stok_in_table']        = collect($varianOptions)->contains(fn ($v) => $v['in_stok']);
+        $row['stok_ok']              = $issueQty <= 0
             || collect($varianOptions)->contains(fn ($v) => $v['stok'] >= $issueQty);
-        $row['stok_available']  = collect($varianOptions)->max('stok') ?? 0;
+        $row['stok_available']       = collect($varianOptions)->max('stok') ?? 0;
 
         return $row;
+    }
+
+    /**
+     * @return array{note: ?string, suggested_id: ?int}
+     */
+    private function previousVarianInfo(int $idpersonel, int $idsub, Collection $subBarangMap, Collection $varianMap): array
+    {
+        $issued = PpeOwnershipService::issuedByVarian($idpersonel, $idsub);
+        if ($issued === []) {
+            return ['note' => null, 'suggested_id' => null];
+        }
+
+        $parts = [];
+        $suggested = null;
+        foreach ($issued as $row) {
+            $idvarian = $row['idbarangvarian'];
+            $label = $idvarian
+                ? ($varianMap[$idvarian]['label'] ?? 'Varian #'.$idvarian)
+                : ($subBarangMap[$idsub]['label'] ?? 'Sub Barang #'.$idsub);
+            $parts[] = $label.' ('.$row['qty'].' pcs)';
+            if ($suggested === null && $idvarian) {
+                $suggested = $idvarian;
+            }
+        }
+
+        return [
+            'note'          => 'Sebelumnya minta: '.implode(', ', $parts).'. Saat menambah, gunakan sub/varian yang sama.',
+            'suggested_id'  => $suggested,
+        ];
     }
 
     /** Daftar varian per sub barang beserta stok di gudang. */

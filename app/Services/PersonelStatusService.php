@@ -60,6 +60,13 @@ class PersonelStatusService
         Personel::where('idpersonel', $idpersonel)->update(['status' => self::STATUS_OFFSITE]);
     }
 
+    /** Perbaiki status satu orang dari state mobilisasi saat ini. */
+    public static function resyncOne(int $idpersonel): void
+    {
+        Personel::where('idpersonel', $idpersonel)
+            ->update(['status' => self::currentStatus($idpersonel)]);
+    }
+
     /** Perbaiki status semua personel dari state mobilisasi saat ini. */
     public static function resyncAll(): void
     {
@@ -67,10 +74,7 @@ class PersonelStatusService
             ->select('idpersonel')
             ->distinct()
             ->pluck('idpersonel')
-            ->each(function (int $idpersonel) {
-                Personel::where('idpersonel', $idpersonel)
-                    ->update(['status' => self::currentStatus($idpersonel)]);
-            });
+            ->each(fn (int $idpersonel) => self::resyncOne($idpersonel));
     }
 
     private static function activeMobilisasiQuery(int $idpersonel)

@@ -31,6 +31,15 @@ class PersonelController extends Controller
             ->latest()
             ->get();
 
+        // Perbaiki status yang tertinggal Onsite setelah draft mob dihapus.
+        $personelList->pluck('idpersonel')->unique()->each(
+            fn ($idpersonel) => PersonelStatusService::resyncOne((int) $idpersonel)
+        );
+        $personelList = Personel::with('posisi')
+            ->where('idgudang', $idgudang)
+            ->latest()
+            ->get();
+
         $registeredPersonelIds = $personelList->pluck('idpersonel')->all();
         $personelApiListTambah = collect($personelApiList)
             ->filter(fn (array $p) => ! in_array((int) $p['idpersonel'], $registeredPersonelIds, true))

@@ -75,7 +75,7 @@ class AccessControl
             'permintaan_buat'  => $adminOnly,
             'permintaan'       => $adminCrud,
             'approval_demob'   => [
-                self::SUPERADMIN  => self::LEVEL_NONE,
+                self::SUPERADMIN  => self::LEVEL_CRUD,
                 self::ADMIN_PPE   => self::LEVEL_NONE,
                 self::HSE_OFFICER => self::LEVEL_CRUD,
                 self::MANAGER     => self::LEVEL_NONE,
@@ -197,6 +197,10 @@ class AccessControl
 
     public static function allows(User $user, string $module, string $needed): bool
     {
+        if ($user->role === self::SUPERADMIN) {
+            return true;
+        }
+
         $have = self::levelFor($user, $module);
 
         if ($needed === self::LEVEL_VIEW) {
