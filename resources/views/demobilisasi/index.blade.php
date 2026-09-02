@@ -81,19 +81,13 @@
                             <td class="text-center text-nowrap">
                                 <a href="{{ route('gudang.demobilisasi.dokumen-mob', [$idgudang, $mob->id, $mp->id]) }}"
                                     class="btn btn-sm btn-outline-primary mb-1">
-                                    <i class="fas fa-file-alt me-1"></i> Mobilisasi
+                                    <i class="fas fa-file-alt me-1"></i> Dokumen
                                 </a>
                                 <br>
-                                @if(in_array($mp->demob_status, ['menunggu_approval', 'selesai']))
-                                    <a href="{{ route('gudang.demobilisasi.dokumen-demob', [$idgudang, $mob->id, $mp->id]) }}"
-                                        class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-file-alt me-1"></i> Demobilisasi
-                                    </a>
-                                @else
-                                    <span class="btn btn-sm btn-outline-secondary disabled">
-                                        <i class="fas fa-file-alt me-1"></i> Demobilisasi
-                                    </span>
-                                @endif
+                                <a href="{{ route('gudang.demobilisasi.dokumen-spare', [$idgudang, $mob->id, $mp->id]) }}"
+                                    class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-file-alt me-1"></i> Spare Barang
+                                </a>
                             </td>
                             <td class="text-end pe-3">
                                 @canCrud('demobilisasi')
@@ -104,8 +98,12 @@
                                         <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">Selesaikan</button>
                                     </form>
                                 @elseif($mp->demob_status === 'belum_cek')
-                                    <a href="{{ route('gudang.demobilisasi.cek', [$idgudang, $mob->id, $mp->id]) }}"
-                                        class="btn btn-sm btn-success rounded-pill px-3">Cek Kelengkapan Personel</a>
+                                    <div class="d-flex flex-column align-items-end gap-1">
+                                        <a href="{{ route('gudang.demobilisasi.cek', [$idgudang, $mob->id, $mp->id]) }}"
+                                            class="btn btn-sm btn-success rounded-pill px-3">Cek Kelengkapan Personel</a>
+                                        <a href="{{ route('gudang.demobilisasi.cek-spare', [$idgudang, $mob->id, $mp->id]) }}"
+                                            class="btn btn-sm btn-outline-success rounded-pill px-3">Cek Spare Barang</a>
+                                    </div>
                                 @elseif($mp->demob_status === 'menunggu_approval')
                                     <span class="badge bg-warning text-dark">Menunggu Approval</span>
                                 @else

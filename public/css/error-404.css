@@ -1,0 +1,142 @@
+/* Halaman 404. CSS lokal supaya tetap tampil tanpa internet. */
+
+:root {
+    --e404-bg: #f7f3ec;
+    --e404-ink: #2c2a28;
+    --e404-muted: #7a756e;
+    --e404-green: #3d6b4a;
+    --e404-brown: #c07845;
+    --e404-brown-hover: #a86638;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+}
+
+body {
+    background: var(--e404-bg);
+    color: var(--e404-ink);
+    font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+.e404 {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.25rem;
+}
+
+.e404-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    width: fit-content;
+    max-width: 100%;
+}
+
+.e404-copy-wrap {
+    flex: 0 1 auto;
+    max-width: 16.5rem;
+}
+
+.e404-title {
+    margin: 0 0 0.45rem;
+    font-size: clamp(4rem, 8vw, 5.75rem);
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    color: var(--e404-ink);
+}
+
+.e404-copy {
+    margin: 0 0 1.15rem;
+    font-size: 1.02rem;
+    line-height: 1.45;
+    color: var(--e404-muted);
+}
+
+.e404-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.7rem;
+    padding: 0.65rem 1.35rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--e404-brown);
+    color: #fff;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.e404-btn:hover {
+    background: var(--e404-brown-hover);
+}
+
+.e404-btn:focus-visible {
+    outline: 2px solid var(--e404-green);
+    outline-offset: 3px;
+}
+
+.e404-art {
+    position: relative;
+    flex: 0 1 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.e404-art::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 8%;
+    width: 52%;
+    height: 1.1rem;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse, rgba(44, 42, 40, 0.14), transparent 70%);
+    pointer-events: none;
+}
+
+.e404-art img {
+    position: relative;
+    z-index: 1;
+    width: min(42vw, 380px);
+    height: auto;
+    aspect-ratio: 1312 / 1199;
+    object-fit: contain;
+    display: block;
+}
+
+@media (max-width: 720px) {
+    .e404-main {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.75rem;
+    }
+
+    .e404-copy-wrap {
+        max-width: 22rem;
+        order: 1;
+    }
+
+    .e404-art {
+        order: 0;
+    }
+
+    .e404-art img {
+        width: min(78vw, 300px);
+    }
+}

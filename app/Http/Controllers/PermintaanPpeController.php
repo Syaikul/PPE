@@ -6,9 +6,11 @@ use App\Models\Stok;
 use App\Services\BarangVarianService;
 use App\Services\GudangContext;
 use App\Services\MasterApiService;
-use App\Services\MrPdfExportService;
+use App\Services\MrExcelExportService;
 use App\Services\StokItemService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use RuntimeException;
 
 class PermintaanPpeController extends Controller
 {
@@ -26,18 +28,22 @@ class PermintaanPpeController extends Controller
         $barangList = $this->fetchBarangList();
         $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
         $varianMap = BarangVarianService::buildMap($barangList);
-        $stokList = Stok::where('idgudang', $idgudang)->orderBy('id')->get();
+        $stokList = Stok::where('idgudang', $idgudang)->orderBy('id')->get()
+            ->sortBy(fn (Stok $stok) => mb_strtolower(
+                StokItemService::labelForRow($stok, $subBarangMap, $varianMap),
+                'UTF-8'
+            ))
+            ->values();
 
         return view('permintaan.create_table', compact('idgudang', 'gudang', 'varianMap', 'subBarangMap', 'stokList'));
     }
 
-    /** Submit → download PDF template saja, tanpa simpan ke data permintaan. */
-    public function export(Request $request, $idgudang, MrPdfExportService $pdfService)
+    /** Submit → download Excel template, tanpa simpan ke data permintaan. */
+    public function export(Request $request, $idgudang, MrExcelExportService $excelService)
     {
         GudangContext::activate((int) $idgudang);
 
         $request->validate([
-            'nomor_mr'          => 'required|string|max:255',
             'tanggal_permintaan'=> 'required|date',
             'items'             => 'required|array|min:1',
             'items.*.stok_id'   => 'required|integer',
@@ -53,22 +59,26 @@ class PermintaanPpeController extends Controller
         $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
         $varianMap = BarangVarianService::buildMap($barangList);
 
-        $pdfItems = [];
+        $excelItems = [];
         foreach ($request->items as $item) {
             $stok = Stok::where('idgudang', $idgudang)->findOrFail($item['stok_id']);
 
-            $pdfItems[] = [
+            $excelItems[] = [
                 'label'     => StokItemService::labelForRow($stok, $subBarangMap, $varianMap),
                 'jumlah'    => (int) $item['qty'],
-                'satuan'    => 'Pcs',
                 'sisa_stok' => (int) $stok->qty,
-                'kategori'  => $stok->kategori ?? Stok::KATEGORI_NON_CONSUMABLE,
             ];
         }
 
-        $tanggalFormatted = \Carbon\Carbon::parse($request->tanggal_permintaan)->format('d/m/Y');
-
-        return $pdfService->download($gudang, $request->nomor_mr, $tanggalFormatted, $pdfItems);
+        try {
+            return $excelService->download(
+                $gudang,
+                Carbon::parse($request->tanggal_permintaan),
+                $excelItems
+            );
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     private function fetchGudang($idgudang): ?array

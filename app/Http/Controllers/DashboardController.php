@@ -8,7 +8,6 @@ use App\Models\MobilisasiPersonel;
 use App\Models\PeminjamanPpe;
 use App\Models\Permintaan;
 use App\Models\Personel;
-use App\Models\SpareBarangPemakaian;
 use App\Models\Stok;
 use App\Services\BarangVarianService;
 use App\Services\GudangContext;
@@ -145,19 +144,19 @@ class DashboardController extends Controller
             ->filter(fn (Permintaan $permintaan) => $permintaan->status !== 'Sudah Selesai')
             ->count();
 
-        $spareMenunggu = SpareBarangPemakaian::query()
-            ->where('status', SpareBarangPemakaian::STATUS_MENUNGGU)
-            ->whereHas('item.spareBarang', fn ($query) => $query->where('idgudang', $idgudang))
+        $peminjamanMenunggu = PeminjamanPpe::query()
+            ->where('idgudang_sumber', $idgudang)
+            ->where('status', PeminjamanPpe::STATUS_PENDING)
             ->count();
 
         $summary = [
-            'personel'          => Personel::where('idgudang', $idgudang)->count(),
-            'total_stok'        => (int) $stokList->sum('qty'),
-            'stok_perlu_atensi' => $stokAlerts->count(),
-            'mobilisasi_aktif'  => $mobilisasiAktif,
-            'demob_menunggu'    => $demobMenunggu,
-            'mr_belum_selesai'  => $mrBelumSelesai,
-            'spare_menunggu'    => $spareMenunggu,
+            'personel'                => Personel::where('idgudang', $idgudang)->count(),
+            'total_stok'              => (int) $stokList->sum('qty'),
+            'stok_perlu_atensi'       => $stokAlerts->count(),
+            'mobilisasi_aktif'        => $mobilisasiAktif,
+            'peminjaman_menunggu'     => $peminjamanMenunggu,
+            'demob_menunggu'          => $demobMenunggu,
+            'mr_belum_selesai'        => $mrBelumSelesai,
         ];
 
         return view('dashboard.index', compact(

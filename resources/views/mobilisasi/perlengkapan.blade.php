@@ -3,6 +3,27 @@
 @section('page_title', 'Data Perlengkapan Mobilisasi')
 
 @section('content')
+<style>
+    .spare-item-panel {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 0.75rem 0.75rem 0.25rem;
+        background: #fff;
+    }
+    .spare-item-panel .dataTables_wrapper .dataTables_filter {
+        float: right;
+        margin-bottom: 0.75rem;
+    }
+    .spare-item-panel .dataTables_wrapper .dataTables_filter input {
+        min-width: 220px;
+    }
+    .spare-item-panel .dataTables_scrollBody {
+        max-height: 28rem;
+    }
+    .spare-item-panel table.dataTable thead th {
+        white-space: nowrap;
+    }
+</style>
 
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -24,6 +45,12 @@
     <span class="fw-semibold">{{ $mobilisasi->sr ? 'SR: '.$mobilisasi->sr : 'Mobilisasi #'.$mobilisasi->id }}</span>
 </div>
 
+@if($perlengkapanLocked)
+    <div class="alert alert-info">
+        Data perlengkapan hanya bisa dilihat. Pengecekan personel sudah disubmit, jadi item tidak bisa ditambah atau diubah.
+    </div>
+@endif
+
 {{-- ============ PERLENGKAPAN PER POSISI (gambar 2) ============ --}}
 @forelse($usedPosisi as $idposisi)
     @php $namaPosisi = $posisiMap[$idposisi]['namaposisi'] ?? 'Posisi #'.$idposisi; @endphp
@@ -31,11 +58,13 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0"><i class="fas fa-hard-hat me-2"></i>{{ $namaPosisi }}</h5>
             @canCrud('mobilisasi')
+            @if(! $perlengkapanLocked)
             <button type="button" class="btn btn-sm btn-success btn-tambah-item"
                 data-idposisi="{{ $idposisi }}" data-posisi="{{ $namaPosisi }}"
                 data-bs-toggle="modal" data-bs-target="#modalTambahItem">
                 Tambahkan Item +
             </button>
+            @endif
             @endcanCrud
         </div>
         <div class="card-body p-0">
@@ -53,18 +82,22 @@
                             <td class="ps-3 fw-semibold">{{ $subBarangMap[$item->idsubbarang]['label'] ?? 'Item #'.$item->idsubbarang }}</td>
                             <td class="text-center">{{ $item->qty }}</td>
                             <td class="text-end pe-3">
+                                @if(! $perlengkapanLocked)
                                 @canCrud('mobilisasi')
                                 <button class="btn btn-sm btn-warning btn-edit-qty"
                                     data-id="{{ $item->id }}" data-qty="{{ $item->qty }}"
                                     data-bs-toggle="modal" data-bs-target="#modalEditQty">Edit Jumlah</button>
                                 <form action="{{ route('gudang.mobilisasi.perlengkapan.destroy', [$idgudang, $mobilisasi->id, $item->id]) }}"
-                                    method="POST" class="d-inline" onsubmit="return confirm('Hapus item ini?')">
+                                    method="POST" class="d-inline">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger">Hapus Perlengkapan dalam Projek ini</button>
                                 </form>
                                 @else
                                 <span class="text-muted">-</span>
                                 @endcanCrud
+                                @else
+                                <span class="text-muted">-</span>
+                                @endif
                             </td>
                         </tr>
                     @empty
@@ -86,10 +119,13 @@
                 <i class="fas fa-plus-square me-2"></i>By Request — {{ $katLabel }}
             </h5>
             @canCrud('mobilisasi')
+            @if(! $perlengkapanLocked)
             <button type="button" class="btn btn-sm btn-success btn-tambah-byrequest"
+                data-kategori="{{ $katLabel }}"
                 data-bs-toggle="modal" data-bs-target="#modalByRequest">
                 Tambahkan Item +
             </button>
+            @endif
             @endcanCrud
         </div>
         <div class="card-body p-0">
@@ -116,19 +152,21 @@
                             <td class="text-end pe-3">
                                 @if($item->untuk_user)
                                     <span class="badge bg-secondary">Sudah keluar stok — tercatat di PPE Keluar</span>
-                                @else
+                                @elseif(! $perlengkapanLocked)
                                     @canCrud('mobilisasi')
                                     <button class="btn btn-sm btn-warning btn-edit-qty"
                                         data-id="{{ $item->id }}" data-qty="{{ $item->qty }}"
                                         data-bs-toggle="modal" data-bs-target="#modalEditQty">Edit Jumlah</button>
                                     <form action="{{ route('gudang.mobilisasi.perlengkapan.destroy', [$idgudang, $mobilisasi->id, $item->id]) }}"
-                                        method="POST" class="d-inline" onsubmit="return confirm('Hapus item ini?')">
+                                        method="POST" class="d-inline">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-danger">Hapus Perlengkapan dalam Projek ini</button>
                                     </form>
                                     @else
                                     <span class="text-muted">-</span>
                                     @endcanCrud
+                                @else
+                                    <span class="text-muted">-</span>
                                 @endif
                             </td>
                         </tr>
@@ -146,15 +184,18 @@
     <div class="card-header d-flex justify-content-between align-items-center">
         <div>
             <h5 class="card-title mb-0"><i class="fas fa-box-open me-2"></i>Spare Barang</h5>
-            <small class="text-muted">Barang yang dijadikan spare langsung mengurangi stok gudang dan terikat ke mobilisasi ini.</small>
+            <small class="text-muted">Barang yang dijadikan spare langsung mengurangi stok gudang dan terikat ke mobilisasi ini. Saat demobilisasi, sisa dikembalikan ke stok dan yang terpakai tercatat di PPE Keluar.</small>
         </div>
+        @if(! $perlengkapanLocked)
         <button type="button" class="btn btn-sm btn-success" data-bs-toggle="collapse" data-bs-target="#formSpareWrap"
             {{ $stokList->isEmpty() || $mobPersonelOptions->isEmpty() ? 'disabled' : '' }}>
             Buat Spare Barang +
         </button>
+        @endif
     </div>
 
     {{-- Form buat SR spare --}}
+    @if(! $perlengkapanLocked)
     <div class="collapse border-bottom" id="formSpareWrap">
         <div class="card-body">
             @if($stokList->isEmpty())
@@ -166,14 +207,14 @@
                     @csrf
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">No SR <span class="text-danger">*</span></label>
-                            <input type="text" name="no_sr" class="form-control" placeholder="Contoh: 22"
-                                value="{{ old('no_sr', $mobilisasi->sr) }}" required>
+                            <label class="form-label fw-semibold">No SR</label>
+                            <input type="text" class="form-control" value="{{ $mobilisasi->sr ?: '-' }}" readonly>
+                            <small class="text-muted">Mengikuti SR mobilisasi.</small>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">Tanggal <span class="text-danger">*</span></label>
-                            <input type="date" name="tanggal" class="form-control"
-                                value="{{ old('tanggal', now()->toDateString()) }}" required>
+                            <label class="form-label fw-semibold">Tanggal</label>
+                            <input type="date" class="form-control" value="{{ $mobilisasi->created_at?->toDateString() }}" readonly>
+                            <small class="text-muted">Mengikuti tanggal mobilisasi.</small>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Penanggung Jawab <span class="text-danger">*</span></label>
@@ -189,16 +230,18 @@
                         </div>
                     </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-bordered align-middle mb-0">
+                    <div class="d-flex justify-content-end mb-2">
+                        <button type="button" class="btn btn-sm btn-success" id="btnPilihSemuaSpare">Pilih Semua</button>
+                    </div>
+
+                    <div class="spare-item-panel mb-3">
+                        <table id="tabelSpareBarang" class="table table-bordered align-middle mb-0 w-100">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Item</th>
+                                    <th>Nama Barang</th>
                                     <th class="text-center" style="width:120px">Stok Saat Ini</th>
                                     <th class="text-center" style="width:120px">Jumlah Spare</th>
-                                    <th class="text-center" style="width:110px">
-                                        <button type="button" class="btn btn-sm btn-success" id="btnPilihSemuaSpare">Pilih Semua</button>
-                                    </th>
+                                    <th class="text-center" style="width:90px">Pilih</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -235,149 +278,11 @@
             @endif
         </div>
     </div>
-
-    {{-- Daftar SR spare mobilisasi ini --}}
-    <div class="card-body p-0">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th class="ps-3" style="width:80px">SR</th>
-                    <th>Item</th>
-                    <th class="text-center" style="width:90px">Jumlah</th>
-                    <th class="text-center" style="width:90px">Sisa</th>
-                    <th style="width:180px">Penanggung Jawab</th>
-                    <th style="width:200px">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($srList as $sr)
-                    @php
-                        $spareItems = $sr->items;
-                        $rowspan = max(1, $spareItems->count());
-                        $pjOpt = $mobPersonelOptions->firstWhere('personel_id', $sr->personel_id);
-                        $namaPj = $sr->personel ? ($pjOpt['nama'] ?? 'Personel #'.$sr->personel_id) : '-';
-                        $srReturned = $sr->isReturned();
-                        $itemsTersedia = $spareItems->filter(fn ($it) => ! $it->isReturned() && $it->sisa > 0);
-                    @endphp
-                    @foreach($spareItems as $idx => $item)
-                        @php
-                            $labelItem = \App\Services\SpareBarangService::labelForItem(
-                                $item->idsubbarang, $item->idbarangvarian, $subBarangMap, $varianMap
-                            );
-                            $menunggu = $item->pemakaian
-                                ->where('status', \App\Models\SpareBarangPemakaian::STATUS_MENUNGGU)
-                                ->sum('qty');
-                        @endphp
-                        <tr>
-                            @if($idx === 0)
-                                <td rowspan="{{ $rowspan }}" class="ps-3 fw-bold">{{ $sr->no_sr }}</td>
-                            @endif
-                            <td>
-                                {{ $labelItem }}
-                                @if($item->isReturned())
-                                    <span class="badge bg-secondary ms-1">Dikembalikan</span>
-                                @endif
-                                @if($menunggu > 0)
-                                    <span class="badge bg-warning text-dark ms-1">{{ $menunggu }} menunggu approval</span>
-                                @endif
-                            </td>
-                            <td class="text-center">{{ $item->jumlah }}</td>
-                            <td class="text-center">
-                                <span class="badge {{ $item->sisa > 0 ? 'bg-success' : 'bg-secondary' }}">{{ $item->sisa }}</span>
-                            </td>
-                            @if($idx === 0)
-                                <td rowspan="{{ $rowspan }}">{{ $namaPj }}</td>
-                                <td rowspan="{{ $rowspan }}">
-                                    @if($srReturned)
-                                        <span class="text-muted">Sudah dikembalikan</span>
-                                    @else
-                                        <form action="{{ route('gudang.mobilisasi.spare.kembalikan', [$idgudang, $mobilisasi->id, $sr->id]) }}"
-                                            method="POST" class="d-inline"
-                                            onsubmit="return confirm('Kembalikan sisa spare SR {{ $sr->no_sr }} ke stok gudang?')">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-outline-primary">Kembalikan</button>
-                                        </form>
-                                        <button type="button" class="btn btn-sm btn-warning"
-                                            data-bs-toggle="modal" data-bs-target="#modalPakaiSpare{{ $sr->id }}"
-                                            {{ $itemsTersedia->isEmpty() || $mobPersonelOptions->isEmpty() ? 'disabled' : '' }}>
-                                            Dipakai
-                                        </button>
-                                    @endif
-                                </td>
-                            @endif
-                        </tr>
-                    @endforeach
-                @empty
-                    <tr><td colspan="6" class="text-center text-muted py-3">Belum ada spare barang untuk mobilisasi ini.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+    @endif
 </div>
 
 {{-- ============ MODALS ============ --}}
 
-{{-- Modal Pakai Spare per SR --}}
-@foreach($srList as $sr)
-    @php $itemsTersedia = $sr->items->filter(fn ($it) => ! $it->isReturned() && $it->sisa > 0); @endphp
-    @if($itemsTersedia->isNotEmpty())
-        <div class="modal fade" id="modalPakaiSpare{{ $sr->id }}" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Pakai Spare — SR {{ $sr->no_sr }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <form action="{{ route('gudang.mobilisasi.spare.pakai', [$idgudang, $mobilisasi->id, $sr->id]) }}" method="POST">
-                        @csrf
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Item yang Dipakai <span class="text-danger">*</span></label>
-                                <select name="spare_barang_item_id" class="form-select" required>
-                                    <option value="" disabled selected>— Pilih Item —</option>
-                                    @foreach($itemsTersedia as $item)
-                                        @php
-                                            $labelItem = \App\Services\SpareBarangService::labelForItem(
-                                                $item->idsubbarang, $item->idbarangvarian, $subBarangMap, $varianMap
-                                            );
-                                        @endphp
-                                        <option value="{{ $item->id }}">{{ $labelItem }} (sisa {{ $item->sisa }})</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Diberikan Kepada <span class="text-danger">*</span></label>
-                                <select name="personel_id" class="form-select" required>
-                                    <option value="" disabled selected>— Pilih Personel MOB —</option>
-                                    @foreach($mobPersonelOptions as $opt)
-                                        <option value="{{ $opt['personel_id'] }}">{{ $opt['nama'] }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Qty <span class="text-danger">*</span></label>
-                                <input type="number" name="qty" class="form-control" min="1" value="1" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Catatan</label>
-                                <textarea name="catatan" class="form-control" rows="2" placeholder="Catatan pemakaian (opsional)"></textarea>
-                            </div>
-                            <div class="alert alert-light border small mb-0">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Pengajuan ini akan masuk ke <strong>Approval Demob</strong>. Setelah disetujui, sisa spare
-                                berkurang dan tercatat di <strong>PPE Keluar</strong>.
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                            <button type="submit" class="btn btn-primary">Ajukan</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    @endif
-@endforeach
 
 {{-- Tambah Item (perlengkapan per posisi) --}}
 <div class="modal fade" id="modalTambahItem" tabindex="-1" aria-hidden="true">
@@ -422,8 +327,9 @@
             <form action="{{ route('gudang.mobilisasi.perlengkapan.store', [$idgudang, $mobilisasi->id]) }}" method="POST" id="formByRequest">
                 @csrf
                 <input type="hidden" name="jenis" value="by_request">
+                <input type="hidden" name="kategori" id="byRequestKategori" value="">
                 <div class="modal-header">
-                    <h5 class="modal-title">Tambah Item By Request</h5>
+                    <h5 class="modal-title">Tambah Item By Request — <span id="byRequestKategoriLabel"></span></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -431,11 +337,8 @@
                         <label class="form-label fw-semibold">Nama PPE</label>
                         <select name="idsubbarang" class="form-select select-barang" id="byRequestSubBarang" required>
                             <option value=""></option>
-                            @foreach($subBarangOptions as $sb)
-                                <option value="{{ $sb['idsubbarang'] }}">{{ $sb['label'] }}{{ $sb['kode'] ? ' ('.$sb['kode'].')' : '' }}</option>
-                            @endforeach
                         </select>
-                        <small class="text-muted">Kategori (Consumable / Non Consumable) mengikuti data Stok.</small>
+                        <small class="text-muted">Hanya barang stok dengan kategori yang sama.</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Yang Mengajukan</label>
@@ -500,7 +403,11 @@
 <script>
     $(document).ready(function () {
         $('#modalTambahItem, #modalByRequest').on('shown.bs.modal', function () {
-            $(this).find('.select-barang').select2({
+            var $sel = $(this).find('.select-barang');
+            if ($sel.hasClass('select2-hidden-accessible')) {
+                $sel.select2('destroy');
+            }
+            $sel.select2({
                 dropdownParent: $(this),
                 placeholder: 'Ketik untuk cari PPE...',
                 width: '100%',
@@ -511,6 +418,35 @@
             btn.addEventListener('click', function () {
                 document.getElementById('tambahIdPosisi').value = this.dataset.idposisi;
                 document.getElementById('tambahPosisiLabel').textContent = this.dataset.posisi;
+            });
+        });
+
+        var byRequestOptions = @json($byRequestOptionsByKategori);
+        document.querySelectorAll('.btn-tambah-byrequest').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var kat = this.dataset.kategori;
+                document.getElementById('byRequestKategori').value = kat;
+                document.getElementById('byRequestKategoriLabel').textContent = kat;
+                var select = document.getElementById('byRequestSubBarang');
+                if ($(select).hasClass('select2-hidden-accessible')) {
+                    $(select).select2('destroy');
+                }
+                select.innerHTML = '<option value=""></option>';
+                var list = byRequestOptions[kat] || [];
+                if (list.length === 0) {
+                    var empty = document.createElement('option');
+                    empty.value = '';
+                    empty.disabled = true;
+                    empty.textContent = 'Tidak ada item ' + kat + ' di stok';
+                    select.appendChild(empty);
+                } else {
+                    list.forEach(function (sb) {
+                        var el = document.createElement('option');
+                        el.value = sb.idsubbarang;
+                        el.textContent = sb.label + (sb.kode ? ' (' + sb.kode + ')' : '');
+                        select.appendChild(el);
+                    });
+                }
             });
         });
 
@@ -553,22 +489,66 @@
         document.getElementById('byRequestPenerima').addEventListener('change', refreshByRequestVarian);
         $('#byRequestSubBarang').on('change', refreshByRequestVarian);
 
-        // ===== Spare Barang form =====
-        document.querySelectorAll('.spare-chk-item').forEach(function (chk) {
-            chk.addEventListener('change', function () {
-                var input = document.querySelector('.spare-input-qty[data-index="' + this.dataset.index + '"]');
-                input.disabled = !this.checked;
-                if (!this.checked) input.value = 0;
+        // ===== Spare Barang form (DataTables, sama pola Buat Tabel Permintaan) =====
+        var spareTable = null;
+
+        function initSpareTable() {
+            if (spareTable || !document.getElementById('tabelSpareBarang')) return;
+
+            spareTable = $('#tabelSpareBarang').DataTable({
+                order: [[0, 'asc']],
+                paging: false,
+                info: true,
+                scrollY: '28rem',
+                scrollCollapse: true,
+                autoWidth: false,
+                language: {
+                    search: 'Cari:',
+                    info: '_TOTAL_ barang',
+                    infoEmpty: 'Tidak ada barang',
+                    infoFiltered: '(dari _MAX_ barang)',
+                    emptyTable: 'Belum ada data.',
+                    zeroRecords: 'Barang tidak ditemukan.',
+                },
+                columnDefs: [
+                    { orderable: false, searchable: false, targets: [2, 3] },
+                ],
             });
+        }
+
+        $('#formSpareWrap').on('shown.bs.collapse', function () {
+            initSpareTable();
+            if (spareTable) {
+                spareTable.columns.adjust();
+            }
+        });
+
+        if ($('#formSpareWrap').hasClass('show')) {
+            initSpareTable();
+        }
+
+        $('#tabelSpareBarang').on('change', '.spare-chk-item', function () {
+            var idx = this.dataset.index;
+            var input = $(this).closest('tr').find('.spare-input-qty').get(0);
+            if (!input && spareTable) {
+                input = spareTable.$('.spare-input-qty[data-index="' + idx + '"]').get(0);
+            }
+            if (!input) return;
+            input.disabled = !this.checked;
+            if (!this.checked) input.value = 0;
         });
 
         var btnPilihSemuaSpare = document.getElementById('btnPilihSemuaSpare');
         if (btnPilihSemuaSpare) {
             btnPilihSemuaSpare.addEventListener('click', function () {
-                var allChecked = [...document.querySelectorAll('.spare-chk-item')].every(function (c) { return c.checked; });
-                document.querySelectorAll('.spare-chk-item').forEach(function (chk) {
-                    chk.checked = !allChecked;
-                    chk.dispatchEvent(new Event('change'));
+                if (!spareTable) initSpareTable();
+                if (!spareTable) return;
+
+                var nodes = spareTable.$('.spare-chk-item');
+                var allChecked = nodes.length > 0 && nodes.filter(':checked').length === nodes.length;
+                nodes.each(function () {
+                    this.checked = !allChecked;
+                    $(this).trigger('change');
                 });
                 this.textContent = allChecked ? 'Pilih Semua' : 'Batal Pilih';
             });
@@ -577,15 +557,21 @@
         var formSpare = document.getElementById('formSpareBarang');
         if (formSpare) {
             formSpare.addEventListener('submit', function (e) {
+                if (!spareTable) initSpareTable();
+
                 var container = document.getElementById('spareItemsContainer');
                 container.innerHTML = '';
                 var count = 0;
                 var valid = true;
+                var rows = spareTable ? spareTable.$('.spare-chk-item') : $('.spare-chk-item');
 
-                document.querySelectorAll('.spare-chk-item:checked').forEach(function (chk) {
-                    var input = document.querySelector('.spare-input-qty[data-index="' + chk.dataset.index + '"]');
-                    var qty = parseInt(input.value) || 0;
-                    var max = parseInt(input.dataset.max) || 0;
+                rows.filter(':checked').each(function () {
+                    var idx = this.dataset.index;
+                    var input = spareTable
+                        ? spareTable.$('.spare-input-qty[data-index="' + idx + '"]').get(0)
+                        : document.querySelector('.spare-input-qty[data-index="' + idx + '"]');
+                    var qty = parseInt(input ? input.value : '0', 10) || 0;
+                    var max = parseInt(input && input.dataset.max ? input.dataset.max : '0', 10) || 0;
 
                     if (qty < 1) return;
                     if (qty > max) { valid = false; return; }
@@ -593,7 +579,7 @@
                     var idInput = document.createElement('input');
                     idInput.type = 'hidden';
                     idInput.name = 'items[' + count + '][stok_id]';
-                    idInput.value = chk.dataset.stokId;
+                    idInput.value = this.dataset.stokId;
                     container.appendChild(idInput);
 
                     var qtyInput = document.createElement('input');

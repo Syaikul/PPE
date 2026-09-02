@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Product Specification — Inventory PPE Mesitech</title>
+<style>
+    @page { margin: 22mm 16mm 20mm 16mm; }
+    body { font-family: DejaVu Sans, sans-serif; font-size: 10.5pt; color: #1e293b; line-height: 1.45; }
+    h1 { font-size: 22pt; color: #0f3d2e; margin: 0 0 6px; }
+    h2 { font-size: 14pt; color: #14532d; border-bottom: 2px solid #16a34a; padding-bottom: 4px; margin: 22px 0 10px; page-break-after: avoid; }
+    h3 { font-size: 12pt; color: #166534; margin: 16px 0 6px; page-break-after: avoid; }
+    h4 { font-size: 10.5pt; color: #334155; margin: 12px 0 4px; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 4px 0 10px 18px; padding: 0; }
+    li { margin-bottom: 3px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 9.2pt; }
+    th { background: #14532d; color: #fff; text-align: left; padding: 6px 7px; font-weight: 600; }
+    td { border: 1px solid #cbd5e1; padding: 5px 7px; vertical-align: top; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    .cover { text-align: center; padding: 70px 20px 40px; page-break-after: always; }
+    .cover .badge { display: inline-block; background: #14532d; color: #fff; padding: 4px 14px; font-size: 9pt; letter-spacing: .4px; margin-bottom: 18px; }
+    .cover h1 { font-size: 26pt; margin-bottom: 8px; }
+    .cover .sub { font-size: 13pt; color: #475569; margin-bottom: 28px; }
+    .meta { width: 70%; margin: 30px auto 0; text-align: left; }
+    .meta td { border: 0; background: transparent !important; padding: 3px 8px; }
+    .meta td:first-child { width: 140px; color: #64748b; }
+    .box { background: #f0fdf4; border: 1px solid #86efac; padding: 8px 12px; margin: 8px 0 12px; }
+    .warn { background: #fff7ed; border: 1px solid #fdba74; padding: 8px 12px; margin: 8px 0 12px; }
+    .note { background: #eff6ff; border: 1px solid #93c5fd; padding: 8px 12px; margin: 8px 0 12px; }
+    .muted { color: #64748b; font-size: 9pt; }
+    .ok { color: #15803d; font-weight: 600; }
+    .fail { color: #b91c1c; font-weight: 600; }
+    .label { font-family: DejaVu Sans, sans-serif; background: #e2e8f0; padding: 1px 5px; font-size: 9pt; }
+    .toc a { color: #14532d; text-decoration: none; }
+    .footer { position: running(footer); }
+    .page-break { page-break-before: always; }
+    .small { font-size: 9pt; }
+    code { font-size: 8.5pt; background: #f1f5f9; padding: 1px 4px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+    <div class="badge">PRODUCT SPECIFICATION DOCUMENT</div>
+    <h1>Inventory PPE</h1>
+    <div class="sub">Sistem Inventaris Alat Pelindung Diri<br>PT Mesitech Mitra</div>
+    <p class="muted">Dokumen ini menjadi patokan fungsional untuk pengujian (manual, otomasi, dan TestSprite).<br>
+    Setiap uji harus memverifikasi perilaku yang tertulis di sini, bukan asumsi dari kode.</p>
+    <table class="meta">
+        <tr><td>Produk</td><td>Inventory PPE (Laravel web app)</td></tr>
+        <tr><td>Versi dokumen</td><td>1.0</td></tr>
+        <tr><td>Tanggal</td><td>26 Agustus 2026</td></tr>
+        <tr><td>Status</td><td>Required Product Spec — Testing Baseline</td></tr>
+        <tr><td>Bahasa UI</td><td>Indonesia</td></tr>
+        <tr><td>Base URL lokal</td><td>http://localhost:8001/</td></tr>
+        <tr><td>Audiens</td><td>QA, TestSprite, pengembang</td></tr>
+    </table>
+</div>
+
+<h2>1. Tujuan produk</h2>
+<p><strong>Inventory PPE</strong> adalah aplikasi web internal untuk mengelola stok alat pelindung diri (PPE) per gudang/proyek. Aplikasi dipakai HSE, admin gudang, dan manajer agar:</p>
+<ul>
+    <li>Stok PPE tercatat per gudang, termasuk varian ukuran.</li>
+    <li>Personel yang diberangkatkan (mobilisasi) membawa kelengkapan sesuai posisi kerja.</li>
+    <li>Barang yang kembali (demobilisasi) dicek: layak, rusak, atau hilang.</li>
+    <li>Permintaan pengadaan (Material Request / MR) dan peminjaman antar gudang tercatat.</li>
+    <li>Akses dibatasi berdasarkan peran dan penugasan gudang.</li>
+</ul>
+<div class="box">
+    <strong>Hasil yang diharapkan dari sistem:</strong> stok gudang selalu mencerminkan barang fisik; personel Onsite tidak bisa dimobilisasi ulang sebelum demob selesai; HSE meng-approve item bermasalah dan pemakaian spare; SuperAdmin mengatur akun dan data master.
+</div>
+
+<h2>2. Siapa pengguna dan apa yang boleh mereka lakukan</h2>
+<p>Ada empat peran. SuperAdmin selalu lolos semua cek izin modul.</p>
+<table>
+    <thead>
+        <tr>
+            <th>Modul</th>
+            <th>SuperAdmin</th>
+            <th>AdminPPE</th>
+            <th>HSE Officer</th>
+            <th>Manager</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td>Dashboard</td><td>Lihat</td><td>Lihat</td><td>Lihat</td><td>Lihat</td></tr>
+        <tr><td>Stok, PPE Masuk, PPE Keluar, Transfer</td><td>CRUD</td><td>CRUD</td><td>Lihat</td><td>Lihat</td></tr>
+        <tr><td>Data Personel</td><td>CRUD</td><td>CRUD</td><td>Lihat</td><td>Lihat</td></tr>
+        <tr><td>Data Pemakaian PPE</td><td>Lihat</td><td>Lihat</td><td>Lihat</td><td>Lihat</td></tr>
+        <tr><td>Buat Tabel Permintaan (export PDF)</td><td>CRUD</td><td>CRUD</td><td>Tidak ada</td><td>Tidak ada</td></tr>
+        <tr><td>Data Permintaan / MR</td><td>CRUD</td><td>CRUD</td><td>Lihat</td><td>Lihat</td></tr>
+        <tr><td>Mobilisasi &amp; Demobilisasi</td><td>CRUD</td><td>CRUD</td><td>Lihat</td><td>Lihat</td></tr>
+        <tr><td>Approval Demob (termasuk spare)</td><td>CRUD</td><td>Tidak ada</td><td>CRUD</td><td>Tidak ada</td></tr>
+        <tr><td>Peminjaman PPE</td><td>CRUD</td><td>Lihat</td><td>CRUD</td><td>Lihat</td></tr>
+        <tr><td>Sync Data Master</td><td>CRUD</td><td>Tidak ada</td><td>Tidak ada</td><td>Tidak ada</td></tr>
+        <tr><td>Kelola Akun &amp; Role</td><td>CRUD</td><td>Tidak ada</td><td>Tidak ada</td><td>Tidak ada</td></tr>
+    </tbody>
+</table>
+<p><strong>Arti level:</strong> <em>Lihat</em> = buka halaman, tanpa tombol tambah/ubah/hapus/approve. <em>CRUD</em> = boleh mengubah data. <em>Tidak ada</em> = menu disembunyikan; URL langsung harus ditolak dan diarahkan ke Daftar Gudang dengan pesan “Anda tidak punya akses ke menu tersebut.”</p>
+<p><strong>Akses gudang:</strong> user bisa ditugaskan ke satu gudang, beberapa gudang, atau seluruh gudang. SuperAdmin otomatis seluruh gudang. Gudang yang tidak ditugaskan tampil di beranda dengan badge “Tidak ada akses” / “Terkunci”; masuk ke URL gudang itu harus ditolak: “Anda tidak punya akses ke gudang ini.”</p>
+
+<h2>3. Cara masuk (autentikasi)</h2>
+<h3>3.1 Halaman login — <span class="label">/login</span></h3>
+<p>Judul kartu: <strong>Masuk ke Inventory PPE</strong>. Pendaftaran publik, lupa password, dan verifikasi email <strong>tidak tersedia</strong> (<code>/register</code> = 404).</p>
+<ol>
+    <li><strong>Masuk dengan Google</strong> (tombol merah, utama): hanya email yang sudah didaftarkan SuperAdmin. Jika domain Workspace dikonfigurasi, hanya email <code>@domain</code> itu. Email belum terdaftar → “Email {email} belum terdaftar…”. Akun nonaktif → “Akun ini dinonaktifkan. Hubungi SuperAdmin.” Setelah sukses, masuk ke <strong>Daftar Gudang</strong> (<code>/home</code>).</li>
+    <li><strong>Cadangan SuperAdmin (email &amp; password)</strong>: form email + password + “Ingat saya” + tombol Login. Akun nonaktif harus logout otomatis dan menampilkan pesan nonaktif.</li>
+</ol>
+<p>User yang sudah login membuka <code>/</code> diarahkan ke <code>/home</code>. Tamu diarahkan ke <code>/login</code>. Semua halaman lain butuh sesi login.</p>
+
+<h3>3.2 Akun uji (seeder lokal)</h3>
+<table>
+    <thead><tr><th>Peran</th><th>Email (contoh seeder)</th><th>Password</th></tr></thead>
+    <tbody>
+        <tr><td>SuperAdmin</td><td>test@example.com</td><td>admin</td></tr>
+    </tbody>
+</table>
+<p class="muted">Akun peran lain dibuat SuperAdmin di menu Kelola Akun &amp; Role. User baru login lewat Google dengan email yang sama; password acak tidak dipakai user biasa.</p>
+
+<h2>4. Pilih gudang lalu masuk aplikasi</h2>
+<p>Setelah login, user melihat <strong>Daftar Gudang</strong>. Setiap kartu menampilkan nama gudang, nomor kontrak, ID <code>GDG-xxx</code>.</p>
+<ul>
+    <li>Gudang berhak: badge <strong>Aktif</strong>, tautan <strong>Masuk →</strong>. Klik menyimpan gudang di sesi dan membuka Dashboard.</li>
+    <li>Gudang tidak berhak: badge <strong>Tidak ada akses</strong>, teks <strong>Terkunci</strong>, klik tidak mengubah sesi.</li>
+    <li>Belum ada data gudang: “Belum ada data gudang.” SuperAdmin mendapat tautan Sync Data Master; peran lain diminta minta SuperAdmin sync.</li>
+    <li>Tombol <strong>Keluar</strong> mengakhiri sesi.</li>
+    <li>Membuka Dashboard tanpa gudang terpilih → kembali ke Daftar Gudang: “Pilih gudang terlebih dahulu untuk membuka dashboard.”</li>
+    <li>Di dalam modul, tombol <strong>Ganti Gudang</strong> kembali ke Daftar Gudang.</li>
+</ul>
+<p>Semua operasi stok/personel/mob-demob bersifat <strong>per gudang yang sedang aktif</strong>, kecuali status personel Onsite/Offsite yang disinkronkan lintas gudang berdasarkan identitas personel master.</p>
+
+<h2>5. Navigasi (sidebar)</h2>
+<table>
+    <thead><tr><th>Menu</th><th>Submenu</th><th>Catatan visibilitas</th></tr></thead>
+    <tbody>
+        <tr><td>Dashboard</td><td>—</td><td>Semua peran</td></tr>
+        <tr><td>Data Stok</td><td>PPE Masuk, PPE Keluar, Stok, Transfer Barang</td><td>Semua yang boleh lihat stok</td></tr>
+        <tr><td>Personel</td><td>Data Personel, Data Pemakaian PPE</td><td>Semua yang boleh lihat personel</td></tr>
+        <tr><td>Permintaan PPE</td><td>Buat Tabel Permintaan, Data Permintaan</td><td>Menu hanya jika bisa lihat permintaan atau buat tabel. Submenu Buat Tabel hanya SuperAdmin &amp; AdminPPE</td></tr>
+        <tr><td>Mob-Demob</td><td>Approval Demob, Mobilisasi, Demobilisasi</td><td>Approval Demob hanya SuperAdmin &amp; HSE Officer</td></tr>
+        <tr><td>Peminjaman PPE</td><td>—</td><td>Semua peran (lihat atau CRUD sesuai matriks)</td></tr>
+        <tr><td>Sync Data Master</td><td>—</td><td>Hanya SuperAdmin</td></tr>
+        <tr><td>Kelola Akun &amp; Role</td><td>—</td><td>Hanya SuperAdmin</td></tr>
+    </tbody>
+</table>
+<p>Header menampilkan nama user dan label peran: SuperAdmin, AdminPPE, HSE Officer, Manager.</p>
+
+<h2 class="page-break">6. Dashboard</h2>
+<p><strong>Tujuan:</strong> ringkasan gudang aktif dan hal yang perlu ditindak.</p>
+<p><strong>Kartu ringkasan:</strong> Personel, Total Unit Stok, Stok Perlu Atensi, Mobilisasi Aktif. Di bagian bawah juga ada metrik Demob menunggu, MR belum selesai, dan spare menunggu (jika ditampilkan di UI).</p>
+<h4>Notifikasi (sekali tampil sampai ditutup)</h4>
+<ul>
+    <li><strong>Pengajuan peminjaman baru</strong> — gudang ini adalah sumber pinjaman, status pending. Teks: “{gudang} mengajukan {qty} unit {barang}.” Tautan “Periksa pengajuan”.</li>
+    <li><strong>Pengajuan disetujui / ditolak</strong> — gudang ini adalah peminjam. Jika ditolak, tampilkan alasan.</li>
+    <li>Menutup notifikasi (tombol Tutup) membuat notifikasi itu tidak muncul lagi untuk user yang sama.</li>
+</ul>
+<h4>Stok Perlu Perhatian</h4>
+<p>Hanya item level <strong>Kritis</strong> (merah, qty &lt; min) atau <strong>Menipis</strong> (kuning). Kosong: “Tidak ada stok kritis atau menipis.” Tautan “Lihat Stok”.</p>
+<h4>Belum Dikembalikan</h4>
+<p>Peminjaman berstatus approved yang melibatkan gudang ini, sampai dikembalikan. Tetap muncul setiap refresh (bukan notifikasi sekali tutup). Kosong: “Tidak ada peminjaman yang belum dikembalikan.”</p>
+<div class="note"><strong>Uji:</strong> tanpa gudang di sesi → redirect home. User tanpa akses gudang sesi → logout konteks gudang + pesan tidak punya akses.</div>
+
+<h2>7. Data master (sumber barang, gudang, personel, posisi)</h2>
+<p>Daftar gudang, personel, posisi, barang+varian, dan perlengkapan per posisi <strong>bukan diinput di aplikasi ini</strong>. SuperAdmin menarik salinan lewat <strong>Sync Data Master</strong> dari API master. Setelah sync, aplikasi membaca salinan lokal (tetap jalan tanpa internet). Sync gagal tidak boleh mengosongkan data lama.</p>
+<p>Endpoint yang di-sync: Gudang, Personel, Posisi, Barang &amp; Varian, Perlengkapan per Posisi. Bisa sync semua atau satu endpoint. Sukses: “Sync berhasil: …”. Gagal sebagian: “Sebagian data gagal di-sync, data lama tetap dipakai.”</p>
+<p>Hanya SuperAdmin yang melihat dan menjalankan menu ini.</p>
+
+<h2>8. Stok PPE</h2>
+<h3>8.1 Halaman Stok</h3>
+<p><strong>Tujuan:</strong> daftar item yang gudang miliki, qty, kategori, dan indikator Min-Max.</p>
+<ul>
+    <li><strong>Tambah stok:</strong> pilih barang/varian dari master yang belum ada di gudang ini, qty ≥ 1, kategori <em>Consumable</em> atau <em>Non Consumable</em>. Barang yang sudah ada tidak boleh ditambah lewat form ini — pesan: “Barang ini sudah ada di stok. Penambahan qty hanya melalui Material Request (MR) atau tombol Ubah.”</li>
+    <li><strong>Ubah:</strong> qty ≥ 1, kategori, dan persen Min (opsional). Sukses: “Stok berhasil diperbarui.”</li>
+    <li><strong>Hapus:</strong> “Stok berhasil dihapus.”</li>
+    <li>HSE/Manager: hanya melihat, tanpa tombol ubah.</li>
+</ul>
+<h4>Aturan Min-Max (indikator warna)</h4>
+<p>Jumlah personel gudang = N. Persen default 10%. Min = max(1, round(N × persen / 100)). Max ideal = N (1 unit per orang).</p>
+<table>
+    <thead><tr><th>Level</th><th>Syarat</th><th>Contoh N=100, Min=10</th></tr></thead>
+    <tbody>
+        <tr><td>Merah (Kritis)</td><td>qty &lt; Min</td><td>0–9</td></tr>
+        <tr><td>Kuning (Menipis)</td><td>Min s.d. min(2×Min, N)</td><td>10–20</td></tr>
+        <tr><td>Abu-abu</td><td>di atas kuning sampai N−1</td><td>21–99</td></tr>
+        <tr><td>Hijau (penuh)</td><td>qty ≥ N</td><td>≥ 100</td></tr>
+    </tbody>
+</table>
+<p>Jika N = 0 atau Min = 0, level abu-abu. Dashboard hanya menampilkan merah dan kuning.</p>
+
+<h3>8.2 PPE Masuk</h3>
+<p>Riwayat barang masuk gudang ini: kedatangan dari Material Request dan transfer masuk. Hanya lihat. Kolom mencakup barang, qty datang, tanggal, nomor terkait.</p>
+<p class="muted">Pencatatan kedatangan MR menambahkan riwayat masuk. Aplikasi memakai halaman ini sebagai jurnal masuk, bukan form input terpisah.</p>
+
+<h3>8.3 PPE Keluar</h3>
+<p>Riwayat barang keluar gudang ini: dikeluarkan saat pengecekan mobilisasi (personel membawa PPE), pemakaian spare yang disetujui, dan transfer keluar. Hanya lihat. Dipakai juga sebagai sumber Data Pemakaian PPE (non-consumable).</p>
+
+<h3>8.4 Transfer Barang</h3>
+<p><strong>Tujuan:</strong> memindahkan stok dari gudang proyek ke <strong>satu gudang tujuan yang dikonfigurasi</strong> (gudang pusat/tujuan transfer).</p>
+<ul>
+    <li>Hanya dari gudang yang <em>bukan</em> gudang tujuan, ke gudang tujuan itu. Sebaliknya ditolak: “Transfer barang hanya dapat dilakukan dari gudang lain ke {nama}.” / “Transfer barang hanya dapat dilakukan ke gudang {nama}.”</li>
+    <li>Input: tanggal, minimal 1 item, qty ≥ 1 dan tidak melebihi stok asal.</li>
+    <li>Sukses: stok asal berkurang, stok tujuan bertambah (item dibuat di tujuan jika belum ada sesuai logika transfer), tercatat di PPE Keluar asal dan PPE Masuk tujuan. Pesan: “Transfer barang ke {nama} berhasil.”</li>
+    <li>Gudang tujuan yang dibuka di menu Transfer melihat status bahwa mereka adalah tujuan (bukan pengirim).</li>
+</ul>
+
+<h2>9. Personel</h2>
+<h3>9.1 Data Personel</h3>
+<p>Daftar personel yang didaftarkan ke gudang ini, dipilih dari master Personel. Setiap orang punya satu atau lebih posisi.</p>
+<ul>
+    <li><strong>Status:</strong> Offsite atau Onsite. Onsite karena mobilisasi di gudang lain ditampilkan “Onsite ({Nama Gudang})”.</li>
+    <li>Status disinkronkan lintas gudang lewat ID personel master: dimobilisasi di mana pun → Onsite di semua gudang; demob dimulai → Offsite di semua gudang.</li>
+    <li>Personel yang sudah terdaftar di gudang ini tidak muncul lagi di opsi tambah.</li>
+    <li>CRUD: tambah (wajib personel + posisi), ubah, hapus — SuperAdmin/AdminPPE. HSE/Manager lihat saja.</li>
+</ul>
+
+<h3>9.2 Data Pemakaian PPE</h3>
+<p>Matriks personel × item <strong>Non Consumable</strong>. Angka = total unit yang pernah keluar untuk orang itu (bukan jumlah transaksi). Klik baris membuka riwayat per item (lintas gudang). Semua peran boleh melihat.</p>
+
+<h2 class="page-break">10. Permintaan PPE (Material Request)</h2>
+<h3>10.1 Buat Tabel Permintaan</h3>
+<p>Hanya SuperAdmin &amp; AdminPPE. Mengisi nomor MR, tanggal, dan item dari stok gudang lalu <strong>unduh PDF template</strong>. <em>Tidak menyimpan</em> ke Data Permintaan. Dipakai untuk dokumen cetak/pengajuan di luar sistem.</p>
+
+<h3>10.2 Data Permintaan</h3>
+<p>MR yang tersimpan di gudang.</p>
+<ol>
+    <li><strong>Buat MR:</strong> nomor MR wajib, minimal 1 item dari stok gudang, qty ≥ 1. Tanggal = hari ini. Sukses: “Material Request berhasil dibuat.”</li>
+    <li><strong>Ubah:</strong> nomor MR. “Nomor MR berhasil diperbarui.”</li>
+    <li><strong>Hapus:</strong> “Material Request berhasil dihapus.”</li>
+    <li><strong>Unduh PDF</strong> dokumen MR.</li>
+    <li><strong>Kedatangan per item:</strong> tanggal, qty datang ≥ 1, no PO opsional, catatan opsional. Qty datang tidak boleh melebihi sisa yang belum datang. Pesan jika berlebih: “QTY datang melebihi sisa yang belum datang (X).”</li>
+</ol>
+<p><strong>Status item:</strong> Belum Datang / Sebagian / Sudah Selesai. <strong>Status MR:</strong> Belum Selesai (semua belum datang), Sebagian, Sudah Selesai (semua item selesai). Dashboard menghitung MR yang belum “Sudah Selesai”.</p>
+<p>HSE/Manager boleh buka daftar, detail, dan PDF; tidak boleh buat/ubah/hapus/catat kedatangan.</p>
+
+<h2>11. Mobilisasi (keberangkatan ke lokasi kerja)</h2>
+<p><strong>Tujuan:</strong> merencanakan tim, mengalokasikan PPE, memastikan setiap orang lengkap, lalu menjalankan proyek.</p>
+<h3>11.1 Daftar &amp; buat</h3>
+<ul>
+    <li>Daftar hanya mobilisasi berstatus <strong>draft</strong> atau <strong>berjalan</strong> (bukan selesai).</li>
+    <li>Buat: SR opsional, lokasi pekerjaan opsional, minimal 1 personel. Hanya personel <strong>Offsite</strong> di gudang ini, dan yang tidak punya demob tertunda (belum cek / menunggu approval) di gudang mana pun.</li>
+    <li>Posisi default = posisi Data Personel, bisa diubah per orang pada form.</li>
+    <li>Saat disimpan: status mobilisasi = <strong>draft</strong>; personel menjadi <strong>Onsite</strong> di semua gudang; perlengkapan per posisi di-seed dari master “Perlengkapan per Posisi”.</li>
+</ul>
+<h3>11.2 Perlengkapan</h3>
+<ul>
+    <li>Jenis <em>perlengkapan</em>: kebutuhan standar per posisi (bisa tambah/ubah/hapus selama masih draft dan belum dikeluarkan dari stok dengan aturan yang berlaku).</li>
+    <li>Jenis <em>by_request</em>: permintaan tambahan. Penerima wajib. Setelah stok dikeluarkan, item by_request untuk user tidak boleh diubah/hapus.</li>
+    <li>Qty tidak boleh melebihi stok tersedia. Pesan stok kurang menyebut nama barang dan qty tersedia vs dibutuhkan.</li>
+</ul>
+<h3>11.3 Spare barang</h3>
+<p>SR spare mengalokasikan stok sebagai cadangan di lapangan: stok gudang langsung berkurang. Pemakaian spare oleh personel masuk antrean approval HSE. Approve → sisa spare berkurang + tercatat PPE Keluar. Tolak → tidak terpakai. Spare bisa dikembalikan ke stok (sisa kembali).</p>
+<h3>11.4 Pengecekan kelengkapan personel</h3>
+<p>Untuk setiap item yang diharapkan (alokasi posisi + by request):</p>
+<ul>
+    <li>Aksi <strong>Ada</strong> / <strong>Tidak</strong>.</li>
+    <li>Consumable: setiap keberangkatan mengeluarkan stok sesuai kebutuhan.</li>
+    <li>Non-consumable: jika personel sudah punya item itu (riwayat keluar lintas gudang), sistem bisa menandai otomatis “Ada”; kekurangan qty tetap “Tidak” sampai stok dikeluarkan.</li>
+    <li>Stok tidak cukup → error, pengecekan tidak lengkap.</li>
+</ul>
+<p><strong>Submit personel</strong> hanya jika semua item lengkap. “Belum bisa submit. Masih ada PPE yang jumlahnya kurang dari kebutuhan.” Sukses mengisi waktu submit.</p>
+<h3>11.5 Jalankan proyek</h3>
+<p>Hanya dari status draft. Semua personel harus sudah submit pengecekan. Status menjadi <strong>berjalan</strong>, data tampil di Demobilisasi. Error: “Proyek sudah berjalan atau selesai.” / “Semua personel harus menyelesaikan pengecekan terlebih dahulu.”</p>
+<p>Hapus mobilisasi draft mengembalikan personel ke Offsite (jika tidak ada mob aktif lain).</p>
+<p>HSE/Manager: lihat daftar/detail/perlengkapan, tidak boleh buat/jalankan/ubah pengecekan.</p>
+
+<h2>12. Demobilisasi (kepulangan)</h2>
+<p>Daftar mobilisasi <strong>berjalan</strong> dan <strong>selesai</strong> (riwayat).</p>
+<ol>
+    <li><strong>Selesaikan</strong> personel: demob_status = belum cek, tanggal demob = hari ini, personel Offsite di semua gudang. Orang ini <strong>tidak boleh dimobilisasi lagi</strong> sampai demob selesai (approve atau cek tanpa masalah). Pesan: “Personel di-demob. Silakan lakukan pengecekan kelengkapan.”</li>
+    <li><strong>Dokumen Mobilisasi:</strong> daftar item status “ada” yang dibawa (lihat).</li>
+    <li><strong>Cek kelengkapan</strong> (hanya status belum cek, CRUD): untuk item non-consumable, isi kondisi:
+        <ul>
+            <li><strong>layak</strong></li>
+            <li><strong>tidak_layak</strong> (wajib qty bermasalah + catatan sesuai form)</li>
+            <li><strong>hilang</strong></li>
+        </ul>
+        Tanpa item bermasalah → demob langsung <strong>selesai</strong>. Ada tidak layak/hilang → <strong>menunggu_approval</strong>. Setelah dicek, form menjadi baca-saja.
+    </li>
+    <li><strong>Dokumen Demobilisasi:</strong> hasil cek (lihat).</li>
+</ol>
+<p>Jika semua personel di mobilisasi berstatus demob selesai, status mobilisasi = <strong>selesai</strong> dan hilang dari daftar Mobilisasi aktif.</p>
+
+<h2>13. Approval Demob</h2>
+<p>Hanya SuperAdmin dan HSE Officer. AdminPPE dan Manager tidak melihat menu dan tidak boleh akses URL.</p>
+<h3>13.1 Personel menunggu approval</h3>
+<p>Daftar personel demob_status menunggu_approval. Tampil item bermasalah (tidak layak / hilang) beserta qty dan catatan.</p>
+<ul>
+    <li><strong>Approve:</strong> demob selesai, catat waktu approve + catatan opsional. “Approval disetujui. Demob personel selesai.” Jika semua orang di mob itu selesai, mob menjadi selesai.</li>
+    <li><strong>Reject:</strong> kembali ke belum cek, hasil cek dihapus agar dicek ulang. “Approval ditolak. Personel dikembalikan ke tahap pengecekan.”</li>
+</ul>
+<h3>13.2 Pemakaian spare menunggu</h3>
+<ul>
+    <li><strong>Approve spare:</strong> sisa spare berkurang, tercatat PPE Keluar. “Pemakaian spare disetujui. Sisa spare berkurang dan tercatat di PPE Keluar.”</li>
+    <li><strong>Reject spare:</strong> “Pemakaian spare ditolak.” Spare tidak berkurang.</li>
+</ul>
+
+<h2 class="page-break">14. Peminjaman PPE antar gudang</h2>
+<p><strong>Tujuan:</strong> gudang A meminjam item yang sudah terdaftar di stok A dari gudang B.</p>
+<ol>
+    <li><strong>Ajukan</strong> (SuperAdmin &amp; HSE): pilih item dari stok gudang peminjam, qty ≥ 1, gudang sumber ≠ gudang sendiri, catatan opsional. Barang harus sudah ada di stok peminjam. Status = <strong>pending</strong> / UI “Menunggu Approval”. Notifikasi muncul di dashboard gudang sumber.</li>
+    <li><strong>Approve</strong> hanya oleh gudang sumber (user dengan CRUD peminjaman di gudang sumber): stok sumber berkurang, stok peminjam bertambah. Stok sumber harus cukup. Status = approved. Notifikasi ke peminjam. Dashboard “Belum Dikembalikan” aktif di kedua sisi.</li>
+    <li><strong>Tolak:</strong> wajib catatan tolak. Status = rejected / UI “Not Approve”. Stok tidak berubah.</li>
+    <li><strong>Kembalikan</strong> oleh gudang sumber saat status approved: stok peminjam berkurang, stok sumber bertambah. Status = returned. Gagal jika stok peminjam tidak cukup.</li>
+</ol>
+<p>AdminPPE dan Manager hanya melihat daftar, tanpa ajukan/approve/tolak/kembalikan.</p>
+<p>Daftar menampilkan peminjaman di mana gudang aktif adalah peminjam atau sumber. Kolom: Nama Barang, Qty, Tanggal (pengajuan / diterima / ditolak / barang dikembalikan), Dari, Untuk, Status, Aksi sesuai peran dan sisi gudang.</p>
+
+<h2>15. Kelola Akun &amp; Role</h2>
+<p>Hanya SuperAdmin.</p>
+<ul>
+    <li><strong>Tambah:</strong> nama, email unik, peran, aktif/nonaktif, seluruh gudang atau minimal satu gudang. SuperAdmin selalu seluruh gudang. Password acak; user login Google. “Akun berhasil ditambahkan…”</li>
+    <li><strong>Ubah:</strong> SuperAdmin tidak boleh menurunkan peran atau menonaktifkan akunnya sendiri.</li>
+    <li><strong>Hapus:</strong> tidak boleh hapus diri sendiri.</li>
+    <li>Akun nonaktif tidak bisa login (Google maupun password).</li>
+</ul>
+
+<h2>16. Alur ujung-ke-ujung yang wajib lolos uji</h2>
+<ol>
+    <li><strong>Login → pilih gudang → dashboard.</strong> Tamu tidak masuk modul. Ganti gudang bekerja. Logout bersih.</li>
+    <li><strong>Stok awal → MR → kedatangan → PPE Masuk &amp; qty stok naik sesuai kebijakan produk.</strong> Status MR berubah Belum Selesai → Sebagian → Sudah Selesai.</li>
+    <li><strong>Daftar personel Offsite → buat mobilisasi → perlengkapan/pengecekan lengkap → jalankan → muncul di Demobilisasi.</strong> Personel Onsite di semua gudang. Tidak bisa dimob lagi.</li>
+    <li><strong>Demob: selesaikan → cek semua layak → selesai tanpa approval.</strong> Bisa dimobilisasi lagi.</li>
+    <li><strong>Demob: cek ada hilang/rusak → masuk Approval Demob → HSE approve/reject.</strong> Reject mengulang cek. Approve menyelesaikan demob.</li>
+    <li><strong>Peminjaman: HSE gudang A ajukan ke B → notifikasi B → HSE B approve → stok pindah → kembalikan → stok kembali.</strong> Tolak tidak mengubah stok. Manager tidak bisa approve.</li>
+    <li><strong>Transfer hanya ke gudang tujuan yang dikonfigurasi.</strong> Stok dan jurnal masuk/keluar konsisten.</li>
+    <li><strong>RBAC:</strong> Manager tidak POST stok/MR/mob. AdminPPE tidak buka Approval Demob, Users, Master Sync. HSE tidak buka Users/Sync/Buat Tabel Permintaan.</li>
+    <li><strong>IDOR gudang:</strong> user gudang 1 tidak bisa CRUD gudang 2 lewat ganti URL.</li>
+    <li><strong>CSRF:</strong> POST tanpa token ditolak (419). Register tetap mati.</li>
+</ol>
+
+<h2>17. Aturan lintas modul (wajib konsisten saat tes)</h2>
+<table>
+    <thead><tr><th>Aturan</th><th>Perilaku yang benar</th></tr></thead>
+    <tbody>
+        <tr><td>Satu item stok per gudang per barang/varian</td><td>Tidak ada duplikat; tambah qty lewat MR atau Ubah</td></tr>
+        <tr><td>Qty tidak negatif</td><td>Operasi yang melebihi stok ditolak dengan pesan jelas</td></tr>
+        <tr><td>Personel Onsite</td><td>Tidak masuk daftar buat mobilisasi</td></tr>
+        <tr><td>Demob belum selesai</td><td>Tidak boleh dimobilisasi di gudang mana pun</td></tr>
+        <tr><td>Consumable vs Non Consumable</td><td>Consumable selalu keluar stok tiap mob; non-consumable mengikuti kepemilikan &amp; cek demob</td></tr>
+        <tr><td>Peminjaman</td><td>Item harus sudah ada di stok peminjam; sumber ≠ peminjam; approve hanya sumber</td></tr>
+        <tr><td>Notifikasi pinjaman baru</td><td>Hilang setelah user menutup; “belum dikembalikan” tetap ada sampai returned</td></tr>
+        <tr><td>Sesi gudang</td><td>Dashboard dan modul memakai gudang sesi; URL gudang lain tanpa hak → home + error</td></tr>
+        <tr><td>UI bahasa Indonesia</td><td>Label, tombol, dan pesan error sesuai teks di dokumen ini</td></tr>
+    </tbody>
+</table>
+
+<h2>18. Yang bukan lingkup produk ini</h2>
+<ul>
+    <li>Pendaftaran mandiri, reset password, login SSO selain Google Workspace.</li>
+    <li>Mengelola master gudang/barang/personel/posisi (hanya sync).</li>
+    <li>Aplikasi mobile native, API publik untuk pihak ketiga, pembayaran.</li>
+    <li>Multi-bahasa UI (hanya Indonesia).</li>
+</ul>
+
+<h2>19. Persyaratan non-fungsional untuk tes</h2>
+<ul>
+    <li>Aplikasi web desktop (sidebar); harus tetap bisa login dan pilih gudang di viewport sempit.</li>
+    <li>Semua POST/PUT/DELETE butuh CSRF dan user terautentikasi.</li>
+    <li>User nonaktif langsung ditendang dari sesi.</li>
+    <li>Halaman modul menampilkan nama gudang aktif agar tester memastikan konteks benar.</li>
+    <li>Setelah aksi sukses/gagal, muncul alert hijau/merah yang bisa ditutup, dan data di tabel sesuai.</li>
+</ul>
+
+<div class="warn">
+    <strong>Cara memakai dokumen ini saat testing:</strong> setiap kasus uji harus merujuk nomor bagian (mis. 11.5 Jalankan proyek). Lulus = UI, pesan, perubahan stok/status, dan hak peran sesuai spesifikasi. Jika kode berbeda dari dokumen ini, itu cacat produk atau cacat dokumen — jangan menyesuaikan tes ke perilaku tak terdokumentasi tanpa keputusan pemilik produk.
+</div>
+
+<p class="muted" style="margin-top:24px;">Inventory PPE — Product Specification v1.0 — 26 Agustus 2026 — PT Mesitech Mitra</p>
+
+</body>
+</html>

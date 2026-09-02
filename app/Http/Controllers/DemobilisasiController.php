@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\DemobPengecekan;
 use App\Models\Mobilisasi;
 use App\Models\MobilisasiPersonel;
+use App\Models\SpareBarang;
 use App\Services\BarangVarianService;
 use App\Services\MasterApiService;
 use App\Services\PersonelStatusService;
+use App\Services\SpareBarangService;
 use App\Services\StokItemService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -75,7 +77,7 @@ class DemobilisasiController extends Controller
     }
 
     /* ---------------------------------------------------------------------
-     | DOKUMEN MOBILISASI — item & jumlah yang dibawa personel
+     | DOKUMEN MOB / DEMOB — satu dokumen; bagian demob muncul setelah cek selesai
      * ------------------------------------------------------------------- */
     public function dokumenMobilisasi($idgudang, $id, $personelId)
     {
@@ -86,7 +88,7 @@ class DemobilisasiController extends Controller
         $varianMap = $this->fetchVarianMapFromApi();
 
         $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($id);
-        $mp = MobilisasiPersonel::with(['posisi', 'personel', 'pengecekan'])
+        $mp = MobilisasiPersonel::with(['posisi', 'personel', 'pengecekan', 'demobPengecekan'])
             ->where('mobilisasi_id', $mobilisasi->id)
             ->findOrFail($personelId);
 
@@ -107,8 +109,24 @@ class DemobilisasiController extends Controller
             ])
             ->values();
 
+        $includeDemob = in_array($mp->demob_status, [
+            MobilisasiPersonel::DEMOB_MENUNGGU,
+            MobilisasiPersonel::DEMOB_SELESAI,
+        ], true);
+
+        $demobItems = $includeDemob
+            ? $mp->demobPengecekan->map(fn ($d) => [
+                'label'          => $subBarangMap[$d->idsubbarang]['label'] ?? 'Item #'.$d->idsubbarang,
+                'kondisi'        => $d->kondisi,
+                'jumlah'         => $d->jumlah,
+                'qty_bermasalah' => $d->isBermasalah() ? $d->qtyBermasalah() : null,
+                'catatan'        => $d->catatan,
+            ])->values()
+            : collect();
+
         return view('demobilisasi.dokumen_mobilisasi', compact(
-            'idgudang', 'gudang', 'mobilisasi', 'mp', 'nama', 'posisiLbl', 'items'
+            'idgudang', 'gudang', 'mobilisasi', 'mp', 'nama', 'posisiLbl',
+            'items', 'includeDemob', 'demobItems'
         ));
     }
 
@@ -147,6 +165,54 @@ class DemobilisasiController extends Controller
 
         return view('demobilisasi.cek_kelengkapan', compact(
             'idgudang', 'gudang', 'mobilisasi', 'mp', 'nama', 'items', 'readonly'
+        ));
+    }
+
+    /* ---------------------------------------------------------------------
+     | CEK SPARE BARANG — kembalikan / pakai spare setelah personel OffSite
+     * ------------------------------------------------------------------- */
+    public function cekSpare($idgudang, $id, $personelId)
+    {
+        $gudang = $this->fetchGudang($idgudang);
+        $personelMapApi = $this->fetchPersonelMap();
+        $barangList = MasterApiService::barangWithVarian();
+        $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
+        $varianMap = BarangVarianService::buildMap($barangList);
+
+        $mobilisasi = Mobilisasi::with(['personel.personel'])
+            ->where('idgudang', $idgudang)
+            ->findOrFail($id);
+
+        $mp = MobilisasiPersonel::with('personel')
+            ->where('mobilisasi_id', $mobilisasi->id)
+            ->findOrFail($personelId);
+
+        if ($mp->demob_status === null) {
+            return redirect()->route('gudang.demobilisasi', $idgudang)
+                ->with('error', 'Pengecekan spare baru bisa dilakukan setelah personel diselesaikan (OffSite).');
+        }
+
+        $nama = $personelMapApi[$mp->personel->idpersonel]['namapersonel'] ?? 'Personel #'.$mp->personel_id;
+
+        $mobPersonelOptions = $mobilisasi->personel->map(fn ($p) => [
+            'mp_id'       => $p->id,
+            'personel_id' => $p->personel_id,
+            'nama'        => $personelMapApi[$p->personel->idpersonel]['namapersonel'] ?? 'Personel #'.$p->personel_id,
+        ])->sortBy('nama')->values();
+
+        $srList = SpareBarang::with(['items', 'personel'])
+            ->where('idgudang', $idgudang)
+            ->where('mobilisasi_id', $mobilisasi->id)
+            ->latest('tanggal')
+            ->latest('id')
+            ->get();
+
+        $showActions = true;
+
+        return view('demobilisasi.cek_spare', compact(
+            'idgudang', 'gudang', 'mobilisasi', 'mp', 'nama',
+            'srList', 'mobPersonelOptions', 'subBarangMap', 'varianMap',
+            'showActions'
         ));
     }
 
@@ -222,30 +288,59 @@ class DemobilisasiController extends Controller
     }
 
     /* ---------------------------------------------------------------------
-     | DOKUMEN DEMOBILISASI — hasil pengecekan item
+     | DOKUMEN DEMOBILISASI — dialihkan ke dokumen gabungan
      * ------------------------------------------------------------------- */
     public function dokumenDemobilisasi($idgudang, $id, $personelId)
     {
+        return redirect()->route('gudang.demobilisasi.dokumen-mob', [$idgudang, $id, $personelId]);
+    }
+
+    /* ---------------------------------------------------------------------
+     | DOKUMEN SPARE BARANG — alokasi, sisa, dan yang terpakai
+     * ------------------------------------------------------------------- */
+    public function dokumenSpare($idgudang, $id, $personelId)
+    {
         $gudang = $this->fetchGudang($idgudang);
         $personelMapApi = $this->fetchPersonelMap();
-        $subBarangMap = $this->fetchSubBarangData($idgudang)[0];
+        $barangList = MasterApiService::barangWithVarian();
+        $subBarangMap = BarangVarianService::buildSubBarangMap($barangList);
+        $varianMap = BarangVarianService::buildMap($barangList);
 
         $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($id);
-        $mp = MobilisasiPersonel::with(['personel', 'demobPengecekan'])
+        $mp = MobilisasiPersonel::with('personel')
             ->where('mobilisasi_id', $mobilisasi->id)
             ->findOrFail($personelId);
 
         $nama = $personelMapApi[$mp->personel->idpersonel]['namapersonel'] ?? 'Personel #'.$mp->personel_id;
 
-        $items = $mp->demobPengecekan->map(fn ($d) => [
-            'label'          => $subBarangMap[$d->idsubbarang]['label'] ?? 'Item #'.$d->idsubbarang,
-            'kondisi'        => $d->kondisi,
-            'jumlah'         => $d->jumlah,
-            'qty_bermasalah' => $d->isBermasalah() ? $d->qtyBermasalah() : null,
-            'catatan'        => $d->catatan,
-        ])->values();
+        $srList = SpareBarang::with(['items', 'personel'])
+            ->where('idgudang', $idgudang)
+            ->where('mobilisasi_id', $mobilisasi->id)
+            ->latest('tanggal')
+            ->latest('id')
+            ->get();
 
-        return view('demobilisasi.dokumen_demobilisasi', compact(
+        $items = $srList->flatMap(function ($sr) use ($subBarangMap, $varianMap, $personelMapApi, $mobilisasi) {
+            $pjNama = $sr->personel
+                ? ($personelMapApi[$sr->personel->idpersonel]['namapersonel'] ?? 'Personel #'.$sr->personel_id)
+                : '-';
+
+            return $sr->items->map(function ($item) use ($sr, $subBarangMap, $varianMap, $pjNama, $mobilisasi) {
+                return [
+                    'sr'       => $mobilisasi->sr ?: ($sr->no_sr ?: '-'),
+                    'label'    => SpareBarangService::labelForItem(
+                        $item->idsubbarang, $item->idbarangvarian, $subBarangMap, $varianMap
+                    ),
+                    'jumlah'   => $item->jumlah,
+                    'sisa'     => $item->sisa,
+                    'dipakai'  => $item->qtyDipakai(),
+                    'returned' => $item->isReturned(),
+                    'pj'       => $pjNama,
+                ];
+            });
+        })->values();
+
+        return view('demobilisasi.dokumen_spare', compact(
             'idgudang', 'gudang', 'mobilisasi', 'mp', 'nama', 'items'
         ));
     }

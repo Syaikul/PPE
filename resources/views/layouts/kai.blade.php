@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>{{ $documentTitle ?? 'Inventory' }}</title>
     <meta content="width=device-width, initial-scale=1.0, shrink-to-fit=no" name="viewport" />
-    <link rel="icon" href="{{ asset('template') }}/assets/img/kaiadmin/favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/png" sizes="128x128" href="{{ asset('images/favicon.png') }}?v=2">
 
     <!-- Fonts and icons (semua lokal, tidak butuh internet) -->
     <link rel="stylesheet" href="{{ asset('template') }}/assets/css/public-sans.css" />
@@ -57,8 +57,10 @@
                                 <a class="dropdown-toggle profile-pic" data-bs-toggle="dropdown" href="#"
                                     aria-expanded="false">
                                     <div class="avatar-sm">
-                                        <img src="{{ asset('template') }}/assets/img/avatar-default.png" alt="..."
-                                            class="avatar-img rounded-circle" />
+                                        <img src="{{ auth()->user()->avatarUrl() }}" alt="{{ auth()->user()->name }}"
+                                            class="avatar-img rounded-circle" style="object-fit:cover"
+                                            referrerpolicy="no-referrer"
+                                            onerror="this.onerror=null;this.src='{{ asset('template') }}/assets/img/avatar-default.png';" />
                                     </div>
                                     <span class="profile-username">
                                         <span class="op-7">Hi,</span>
@@ -71,8 +73,10 @@
                                         <li>
                                             <div class="user-box">
                                                 <div class="avatar-lg">
-                                                    <img src="{{ asset('template') }}/assets/img/avatar-default.png"
-                                                        alt="image profile" class="avatar-img rounded" />
+                                                    <img src="{{ auth()->user()->avatarUrl() }}" alt="{{ auth()->user()->name }}"
+                                                        class="avatar-img rounded" style="object-fit:cover"
+                                                        referrerpolicy="no-referrer"
+                                                        onerror="this.onerror=null;this.src='{{ asset('template') }}/assets/img/avatar-default.png';" />
                                                 </div>
                                                 <div class="u-text">
                                                     <h4>{{ auth()->user()->name }}</h4>

@@ -124,6 +124,7 @@ class AccessControl
 
             'gudang.ppe-masuk'                   => ['ppe_masuk', self::LEVEL_VIEW],
             'gudang.ppe-keluar'                  => ['ppe_keluar', self::LEVEL_VIEW],
+            'gudang.ppe-keluar.store'            => ['ppe_keluar', self::LEVEL_CRUD],
 
             'gudang.personel'                    => ['personel', self::LEVEL_VIEW],
             'gudang.personel.store'              => ['personel', self::LEVEL_CRUD],
@@ -154,8 +155,6 @@ class AccessControl
             'gudang.mobilisasi.perlengkapan.update' => ['mobilisasi', self::LEVEL_CRUD],
             'gudang.mobilisasi.perlengkapan.destroy' => ['mobilisasi', self::LEVEL_CRUD],
             'gudang.mobilisasi.spare.store'      => ['mobilisasi', self::LEVEL_CRUD],
-            'gudang.mobilisasi.spare.pakai'      => ['mobilisasi', self::LEVEL_CRUD],
-            'gudang.mobilisasi.spare.kembalikan' => ['mobilisasi', self::LEVEL_CRUD],
             'gudang.mobilisasi.pengecekan'       => ['mobilisasi', self::LEVEL_CRUD],
             'gudang.mobilisasi.pengecekan.update' => ['mobilisasi', self::LEVEL_CRUD],
             'gudang.mobilisasi.pengecekan.submit' => ['mobilisasi', self::LEVEL_CRUD],
@@ -164,15 +163,16 @@ class AccessControl
             'gudang.demobilisasi'                => ['demobilisasi', self::LEVEL_VIEW],
             'gudang.demobilisasi.dokumen-mob'    => ['demobilisasi', self::LEVEL_VIEW],
             'gudang.demobilisasi.dokumen-demob'  => ['demobilisasi', self::LEVEL_VIEW],
+            'gudang.demobilisasi.dokumen-spare'  => ['demobilisasi', self::LEVEL_VIEW],
             'gudang.demobilisasi.selesaikan'     => ['demobilisasi', self::LEVEL_CRUD],
             'gudang.demobilisasi.cek'            => ['demobilisasi', self::LEVEL_CRUD],
             'gudang.demobilisasi.cek.store'      => ['demobilisasi', self::LEVEL_CRUD],
+            'gudang.demobilisasi.cek-spare'      => ['demobilisasi', self::LEVEL_CRUD],
+            'gudang.mobilisasi.spare.kembalikan' => ['demobilisasi', self::LEVEL_CRUD],
 
             'gudang.approval-demob'              => ['approval_demob', self::LEVEL_CRUD],
             'gudang.approval-demob.approve'      => ['approval_demob', self::LEVEL_CRUD],
             'gudang.approval-demob.reject'       => ['approval_demob', self::LEVEL_CRUD],
-            'gudang.approval-demob.spare.approve' => ['approval_demob', self::LEVEL_CRUD],
-            'gudang.approval-demob.spare.reject' => ['approval_demob', self::LEVEL_CRUD],
 
             'gudang.peminjaman-ppe'              => ['peminjaman', self::LEVEL_VIEW],
             'gudang.peminjaman-ppe.store'        => ['peminjaman', self::LEVEL_CRUD],

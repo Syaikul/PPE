@@ -9,7 +9,6 @@ use App\Models\MobilisasiPersonel;
 use App\Models\MobilisasiPersonelPosisi;
 use App\Models\Personel;
 use App\Models\PpeKeluar;
-use App\Models\SpareBarang;
 use App\Models\Stok;
 use App\Services\BarangVarianService;
 use App\Services\MasterApiService;
@@ -163,8 +162,8 @@ class MobilisasiController extends Controller
             return $mobilisasi;
         });
 
-        return redirect()->route('gudang.mobilisasi.show', [$idgudang, $mobilisasi->id])
-            ->with('success', 'Mobilisasi berhasil dibuat.');
+        return redirect()->route('gudang.mobilisasi.perlengkapan', [$idgudang, $mobilisasi->id])
+            ->with('success', 'Mobilisasi berhasil dibuat. Lengkapi data perlengkapan sebelum pengecekan personel.');
     }
 
     /* ---------------------------------------------------------------------
@@ -224,15 +223,23 @@ class MobilisasiController extends Controller
         $semuaSubmitted = $mobilisasi->personel->isNotEmpty()
             && $mobilisasi->personel->every(fn ($mp) => $mp->submitted_at !== null);
         $bisaJalankan = $semuaSubmitted && $mobilisasi->status === 'draft';
+        $perlengkapanLocked = $mobilisasi->hasSubmittedPengecekan();
+        $needPerlengkapanConfirm = ! $perlengkapanLocked
+            && ! session('mobilisasi_yakin_perlengkapan.'.$mobilisasi->id);
 
         return view('mobilisasi.show', compact(
-            'idgudang', 'gudang', 'mobilisasi', 'rows', 'semuaLengkap', 'semuaSubmitted', 'bisaJalankan'
+            'idgudang', 'gudang', 'mobilisasi', 'rows', 'semuaLengkap', 'semuaSubmitted',
+            'bisaJalankan', 'perlengkapanLocked', 'needPerlengkapanConfirm'
         ));
     }
 
     public function destroy($idgudang, $id)
     {
         $mobilisasi = Mobilisasi::with('personel.personel')->where('idgudang', $idgudang)->findOrFail($id);
+
+        if ($mobilisasi->status !== 'draft') {
+            return back()->with('error', 'Mobilisasi yang sedang berjalan atau sudah selesai tidak bisa dihapus.');
+        }
 
         DB::transaction(function () use ($mobilisasi) {
             $idpersonels = $mobilisasi->personel
@@ -328,19 +335,17 @@ class MobilisasiController extends Controller
             ->orderBy('id')
             ->get();
 
-        $srList = SpareBarang::with(['items.pemakaian', 'personel'])
-            ->where('idgudang', $idgudang)
-            ->where('mobilisasi_id', $mobilisasi->id)
-            ->latest('tanggal')
-            ->latest('id')
-            ->get();
+        $byRequestOptionsByKategori = $this->byRequestOptionsFromStok($idgudang, $subBarangMap);
+
+        $perlengkapanLocked = $mobilisasi->hasSubmittedPengecekan();
 
         return view('mobilisasi.perlengkapan', compact(
             'idgudang', 'gudang', 'mobilisasi', 'usedPosisi', 'posisiMap',
             'subBarangMap', 'kategoriMap', 'subBarangOptions', 'varianMap',
             'perlengkapanByPosisi', 'byRequestConsumable', 'byRequestNonConsumable',
+            'byRequestOptionsByKategori',
             'mobPersonelOptions', 'namaUserLabel', 'varianBySubBarang',
-            'stokList', 'srList'
+            'stokList', 'perlengkapanLocked'
         ));
     }
 
@@ -353,9 +358,14 @@ class MobilisasiController extends Controller
             'idposisi'       => 'required_if:jenis,perlengkapan|nullable|integer',
             'penerima'       => 'required_if:jenis,by_request|nullable|string',
             'idbarangvarian' => 'nullable|integer',
+            'kategori'       => 'required_if:jenis,by_request|nullable|in:Consumable,Non Consumable',
         ]);
 
         $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($id);
+
+        if ($locked = $this->rejectIfPerlengkapanLocked($mobilisasi)) {
+            return $locked;
+        }
 
         if ($request->jenis === 'perlengkapan') {
             MobilisasiPerlengkapan::create([
@@ -369,7 +379,16 @@ class MobilisasiController extends Controller
             return back()->with('success', 'Item perlengkapan ditambahkan.');
         }
 
-        // ===== By Request =====
+        // ===== By Request: daftar & validasi mengikuti kategori di tabel stok =====
+        $itemKategori = $this->stokKategoriForSubBarang((int) $idgudang, (int) $request->idsubbarang);
+        if ($itemKategori === null) {
+            return back()->with('error', 'Item belum ada di stok gudang ini.');
+        }
+        $diminta = $request->kategori === 'Consumable' ? 'Consumable' : 'Non Consumable';
+        if ($itemKategori !== $diminta) {
+            return back()->with('error', 'Item tersebut bukan kategori '.$diminta.'.');
+        }
+
         if ($request->penerima === 'user') {
             // Untuk klien: langsung keluar stok atas nama USER (Nama Gudang), dianggap habis.
             return $this->storeByRequestUser($request, (int) $idgudang, $mobilisasi);
@@ -469,6 +488,11 @@ class MobilisasiController extends Controller
         $request->validate(['qty' => 'required|integer|min:1']);
 
         $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($id);
+
+        if ($locked = $this->rejectIfPerlengkapanLocked($mobilisasi)) {
+            return $locked;
+        }
+
         $item = $mobilisasi->perlengkapan()->findOrFail($itemId);
 
         if ($item->untuk_user) {
@@ -483,6 +507,11 @@ class MobilisasiController extends Controller
     public function destroyPerlengkapan($idgudang, $id, $itemId)
     {
         $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($id);
+
+        if ($locked = $this->rejectIfPerlengkapanLocked($mobilisasi)) {
+            return $locked;
+        }
+
         $item = $mobilisasi->perlengkapan()->findOrFail($itemId);
 
         if ($item->untuk_user) {
@@ -497,7 +526,7 @@ class MobilisasiController extends Controller
     /* ---------------------------------------------------------------------
      | PENGECEKAN per personel (gambar 4)
      * ------------------------------------------------------------------- */
-    public function pengecekan($idgudang, $id, $personelId)
+    public function pengecekan(Request $request, $idgudang, $id, $personelId)
     {
         session(['idgudang' => $idgudang]);
 
@@ -508,6 +537,20 @@ class MobilisasiController extends Controller
         $varianMap = $this->fetchVarianMap();
 
         $mobilisasi = Mobilisasi::where('idgudang', $idgudang)->findOrFail($id);
+
+        if ($request->boolean('yakin')) {
+            session(['mobilisasi_yakin_perlengkapan.'.$mobilisasi->id => true]);
+        }
+
+        $sudahYakin = $mobilisasi->hasSubmittedPengecekan()
+            || session('mobilisasi_yakin_perlengkapan.'.$mobilisasi->id);
+
+        if (! $sudahYakin) {
+            return redirect()
+                ->route('gudang.mobilisasi.show', [$idgudang, $mobilisasi->id])
+                ->with('error', 'Konfirmasi data perlengkapan mobilisasi terlebih dahulu.');
+        }
+
         $mp = MobilisasiPersonel::with('posisi')
             ->where('mobilisasi_id', $mobilisasi->id)
             ->findOrFail($personelId);
@@ -597,7 +640,7 @@ class MobilisasiController extends Controller
 
         // Catat barang keluar hanya saat transisi menjadi "Ada" (hindari duplikasi).
         if ($request->action === 'ada' && $pengecekan->status !== 'ada') {
-            $needed = $this->calcIssueQty($idsub, $pengecekan->jumlah, $idpersonel, $isConsumable);
+            $needed = $this->calcIssueQty($idsub, $pengecekan->jumlah, $idpersonel, $isConsumable, $pengecekan->status);
 
             if ($needed > 0) {
                 if ($hasRealVariants) {
@@ -885,11 +928,12 @@ class MobilisasiController extends Controller
         return isset($posisi['idposisi']) ? (int) $posisi['idposisi'] : null;
     }
 
-    private function calcIssueQty(int $idsub, int $jumlah, int $idpersonel, bool $isConsumable): int
+    private function calcIssueQty(int $idsub, int $jumlah, int $idpersonel, bool $isConsumable, string $status = 'tidak'): int
     {
         if ($isConsumable) {
-            // Consumable selalu dikeluarkan penuh saat Tambahkan (habis pakai).
-            return $jumlah;
+            // Consumable selalu dikeluarkan penuh saat Tambahkan (habis pakai),
+            // tapi setelah status "ada" di pengecekan ini, tidak perlu dikeluarkan lagi.
+            return $status === 'ada' ? 0 : $jumlah;
         }
 
         // Non consumable: hanya keluarkan kekurangan dari yang sudah dimiliki (lintas gudang).
@@ -900,7 +944,7 @@ class MobilisasiController extends Controller
     {
         $ownedQty = $isConsumable ? 0 : PpeOwnershipService::ownedUsableQty($idpersonel, $idsub);
         $lostQty = $isConsumable ? 0 : PpeOwnershipService::lostQty($idpersonel, $idsub);
-        $issueQty = $this->calcIssueQty($idsub, $jumlah, $idpersonel, $isConsumable);
+        $issueQty = $this->calcIssueQty($idsub, $jumlah, $idpersonel, $isConsumable, $row['status'] ?? 'tidak');
 
         // Status "ada" tidak boleh menyembunyikan kekurangan qty.
         if (! $isConsumable && $issueQty > 0) {
@@ -1026,6 +1070,66 @@ class MobilisasiController extends Controller
     }
 
     /* ----- API fetch helpers ----- */
+    private function rejectIfPerlengkapanLocked(Mobilisasi $mobilisasi)
+    {
+        if ($mobilisasi->hasSubmittedPengecekan()) {
+            return back()->with('error', 'Data perlengkapan tidak bisa diubah karena pengecekan personel sudah disubmit.');
+        }
+
+        return null;
+    }
+
+    /**
+     * Opsi By Request: hanya item yang sudah ada di tabel stok, dipisah sesuai kategorinya.
+     *
+     * @return array{Consumable: Collection, 'Non Consumable': Collection}
+     */
+    private function byRequestOptionsFromStok($idgudang, Collection $subBarangMap): array
+    {
+        $options = [
+            'Consumable'     => collect(),
+            'Non Consumable' => collect(),
+        ];
+
+        $grouped = Stok::where('idgudang', $idgudang)
+            ->whereNotNull('idsubbarang')
+            ->get(['idsubbarang', 'kategori'])
+            ->groupBy(fn (Stok $s) => (int) $s->idsubbarang);
+
+        foreach ($grouped as $idsub => $rows) {
+            $sb = $subBarangMap->get($idsub) ?? $subBarangMap->get((string) $idsub);
+            if (! $sb) {
+                continue;
+            }
+
+            $kat = $rows->contains(fn (Stok $s) => $s->kategori === Stok::KATEGORI_CONSUMABLE)
+                ? Stok::KATEGORI_CONSUMABLE
+                : Stok::KATEGORI_NON_CONSUMABLE;
+            $options[$kat]->push($sb);
+        }
+
+        $options['Consumable'] = $options['Consumable']->unique('idsubbarang')->values();
+        $options['Non Consumable'] = $options['Non Consumable']->unique('idsubbarang')->values();
+
+        return $options;
+    }
+
+    /** Kategori item di stok gudang ini, atau null jika belum ada di stok. */
+    private function stokKategoriForSubBarang(int $idgudang, int $idsubbarang): ?string
+    {
+        $rows = Stok::where('idgudang', $idgudang)
+            ->where('idsubbarang', $idsubbarang)
+            ->get(['kategori']);
+
+        if ($rows->isEmpty()) {
+            return null;
+        }
+
+        return $rows->contains(fn (Stok $s) => $s->kategori === Stok::KATEGORI_CONSUMABLE)
+            ? Stok::KATEGORI_CONSUMABLE
+            : Stok::KATEGORI_NON_CONSUMABLE;
+    }
+
     private function fetchGudang($idgudang): ?array
     {
         return MasterApiService::gudangById((int) $idgudang);

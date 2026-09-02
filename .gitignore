@@ -25,3 +25,9 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# TestSprite — cache lokal & artefak auto-generate (jangan di-commit)
+testsprite_tests/tmp/
+testsprite_tests/*.py
+testsprite_tests/*.html
+testsprite_tests/*.pdf

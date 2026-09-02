@@ -25,4 +25,18 @@ class Mobilisasi extends Model
     {
         return $this->hasMany(MobilisasiPerlengkapan::class, 'mobilisasi_id');
     }
+
+    public function spareBarang(): HasMany
+    {
+        return $this->hasMany(SpareBarang::class, 'mobilisasi_id');
+    }
+
+    public function hasSubmittedPengecekan(): bool
+    {
+        if ($this->relationLoaded('personel')) {
+            return $this->personel->contains(fn ($mp) => $mp->submitted_at !== null);
+        }
+
+        return $this->personel()->whereNotNull('submitted_at')->exists();
+    }
 }

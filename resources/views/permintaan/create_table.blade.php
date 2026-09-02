@@ -3,6 +3,27 @@
 @section('page_title', 'Buat Tabel Permintaan — ' . ($gudang['namagudang'] ?? 'Gudang'))
 
 @section('content')
+<style>
+    .permintaan-item-panel {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 0.75rem 0.75rem 0.25rem;
+        background: #fff;
+    }
+    .permintaan-item-panel .dataTables_wrapper .dataTables_filter {
+        float: right;
+        margin-bottom: 0.75rem;
+    }
+    .permintaan-item-panel .dataTables_wrapper .dataTables_filter input {
+        min-width: 220px;
+    }
+    .permintaan-item-panel .dataTables_scrollBody {
+        max-height: 28rem;
+    }
+    .permintaan-item-panel table.dataTable thead th {
+        white-space: nowrap;
+    }
+</style>
 
 @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -38,33 +59,27 @@
         @else
             <form id="formBuatPermintaan" action="{{ route('gudang.permintaan-ppe.export', $idgudang) }}" method="POST">
                 @csrf
-                <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Nomor MR <span class="text-danger">*</span></label>
-                        <input type="text" name="nomor_mr" class="form-control"
-                            placeholder="Contoh: 0158/MR/DIV.2/ONWJ/WM/I-25" required value="{{ old('nomor_mr') }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">Tanggal Permintaan <span class="text-danger">*</span></label>
+                <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+                    <div style="min-width: 220px; max-width: 280px;">
+                        <label class="form-label fw-semibold mb-1">Tanggal Permintaan <span class="text-danger">*</span></label>
                         <input type="date" name="tanggal_permintaan" class="form-control"
                             value="{{ old('tanggal_permintaan', now()->toDateString()) }}" required>
                     </div>
+                    <button type="button" class="btn btn-sm btn-success" id="btnPilihSemua">Pilih Semua</button>
                 </div>
 
-                <div class="table-responsive">
-                    <table class="table table-bordered align-middle mb-0">
+                <div class="permintaan-item-panel mb-3">
+                    <table id="tabelBuatPermintaan" class="table table-bordered align-middle mb-0 w-100">
                         <thead class="table-light">
                             <tr>
                                 <th>Nama Barang</th>
                                 <th class="text-center" style="width:120px">Stok Saat Ini</th>
                                 <th class="text-center" style="width:120px">Input Stok</th>
-                                <th class="text-center" style="width:100px">
-                                    <button type="button" class="btn btn-sm btn-success" id="btnPilihSemua">Pilih Semua</button>
-                                </th>
+                                <th class="text-center" style="width:90px">Pilih</th>
                             </tr>
                         </thead>
                         <tbody>
-                                @foreach($stokList as $i => $stok)
+                            @foreach($stokList as $i => $stok)
                                 @php $label = \App\Services\StokItemService::labelForRow($stok, $subBarangMap, $varianMap); @endphp
                                 <tr>
                                     <td class="fw-semibold">{{ $label }}</td>
@@ -86,9 +101,9 @@
 
                 <div id="itemsContainer"></div>
 
-                <div class="d-flex justify-content-end gap-2 mt-4">
+                <div class="d-flex justify-content-end gap-2 mt-3">
                     <button type="submit" class="btn btn-primary px-4">
-                        <i class="fas fa-file-pdf me-1"></i> Submit & Download PDF
+                        <i class="fas fa-file-excel me-1"></i> Submit & Download Excel
                     </button>
                 </div>
             </form>
@@ -98,50 +113,68 @@
 
 @push('scripts')
 <script>
-    document.querySelectorAll('.chk-item').forEach(function (chk) {
-        chk.addEventListener('change', function () {
+    $(document).ready(function () {
+        var table = $('#tabelBuatPermintaan').DataTable({
+            order: [[0, 'asc']],
+            paging: false,
+            info: true,
+            scrollY: '28rem',
+            scrollCollapse: true,
+            autoWidth: false,
+            language: {
+                search: 'Cari:',
+                info: '_TOTAL_ barang',
+                infoEmpty: 'Tidak ada barang',
+                infoFiltered: '(dari _MAX_ barang)',
+                emptyTable: 'Belum ada data.',
+                zeroRecords: 'Barang tidak ditemukan.',
+            },
+            columnDefs: [
+                { orderable: false, searchable: false, targets: [2, 3] },
+            ],
+        });
+
+        $('#tabelBuatPermintaan').on('change', '.chk-item', function () {
             var idx = this.dataset.index;
-            var input = document.querySelector('.input-qty[data-index="' + idx + '"]');
+            var input = $(this).closest('tr').find('.input-qty').get(0)
+                || document.querySelector('.input-qty[data-index="' + idx + '"]');
+            if (!input) return;
             input.disabled = !this.checked;
             if (!this.checked) input.value = 0;
         });
-    });
 
-    var btnPilihSemua = document.getElementById('btnPilihSemua');
-    if (btnPilihSemua) {
-        btnPilihSemua.addEventListener('click', function () {
-            var allChecked = [...document.querySelectorAll('.chk-item')].every(function (c) { return c.checked; });
-            document.querySelectorAll('.chk-item').forEach(function (chk) {
-                chk.checked = !allChecked;
-                chk.dispatchEvent(new Event('change'));
+        $('#btnPilihSemua').on('click', function () {
+            var nodes = table.$('.chk-item');
+            var allChecked = nodes.length > 0 && nodes.filter(':checked').length === nodes.length;
+            nodes.each(function () {
+                this.checked = !allChecked;
+                $(this).trigger('change');
             });
             this.textContent = allChecked ? 'Pilih Semua' : 'Batal Pilih';
         });
-    }
 
-    var form = document.getElementById('formBuatPermintaan');
-    if (form) {
-        form.addEventListener('submit', function (e) {
+        $('#formBuatPermintaan').on('submit', function (e) {
             var container = document.getElementById('itemsContainer');
             container.innerHTML = '';
             var count = 0;
 
-            document.querySelectorAll('.chk-item:checked').forEach(function (chk) {
-                var idx = chk.dataset.index;
-                var qty = parseInt(document.querySelector('.input-qty[data-index="' + idx + '"]').value) || 0;
+            table.$('.chk-item').filter(':checked').each(function () {
+                var idx = this.dataset.index;
+                var qtyInput = table.$('.input-qty[data-index="' + idx + '"]').get(0);
+                var qty = parseInt(qtyInput ? qtyInput.value : '0', 10) || 0;
                 if (qty < 1) return;
 
                 var idInput = document.createElement('input');
                 idInput.type = 'hidden';
-            idInput.name = 'items[' + count + '][stok_id]';
-            idInput.value = chk.dataset.stokId;
+                idInput.name = 'items[' + count + '][stok_id]';
+                idInput.value = this.dataset.stokId;
                 container.appendChild(idInput);
 
-                var qtyInput = document.createElement('input');
-                qtyInput.type = 'hidden';
-                qtyInput.name = 'items[' + count + '][qty]';
-                qtyInput.value = qty;
-                container.appendChild(qtyInput);
+                var hiddenQty = document.createElement('input');
+                hiddenQty.type = 'hidden';
+                hiddenQty.name = 'items[' + count + '][qty]';
+                hiddenQty.value = qty;
+                container.appendChild(hiddenQty);
 
                 count++;
             });
@@ -151,7 +184,7 @@
                 alert('Pilih minimal 1 barang dengan qty lebih dari 0.');
             }
         });
-    }
+    });
 </script>
 @endpush
 

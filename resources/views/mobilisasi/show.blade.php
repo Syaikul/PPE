@@ -22,8 +22,12 @@
         <i class="fas fa-arrow-left me-1"></i> Kembali
     </a>
     <a href="{{ route('gudang.mobilisasi.perlengkapan', [$idgudang, $mobilisasi->id]) }}"
-        class="btn btn-info text-white rounded-pill px-4">
-        <i class="fas fa-box-open me-1"></i> Data Perlengkapan Mobilisasi
+        class="btn {{ $perlengkapanLocked ? 'btn-outline-info' : 'btn-info text-white' }} rounded-pill px-4">
+        <i class="fas {{ $perlengkapanLocked ? 'fa-eye' : 'fa-box-open' }} me-1"></i>
+        Data Perlengkapan Mobilisasi
+        @if($perlengkapanLocked)
+            <span class="small ms-1">(lihat)</span>
+        @endif
     </a>
 </div>
 
@@ -74,11 +78,20 @@
                                     <span class="badge bg-primary">Ter-submit</span>
                                 @else
                                     @canCrud('mobilisasi')
+                                    @if($needPerlengkapanConfirm)
+                                    <button type="button"
+                                        class="btn btn-sm {{ $row['lengkap'] ? 'btn-success' : 'btn-outline-danger' }} btn-konfirmasi-pengecekan"
+                                        data-pengecekan-url="{{ route('gudang.mobilisasi.pengecekan', [$idgudang, $mobilisasi->id, $row['mp']->id]) }}">
+                                        {{ $row['lengkap'] ? 'Lengkap' : 'Tidak Lengkap' }}
+                                        <span class="badge bg-light text-dark ms-1">{{ $row['ada'] }}/{{ $row['total'] }}</span>
+                                    </button>
+                                    @else
                                     <a href="{{ route('gudang.mobilisasi.pengecekan', [$idgudang, $mobilisasi->id, $row['mp']->id]) }}"
                                         class="btn btn-sm {{ $row['lengkap'] ? 'btn-success' : 'btn-outline-danger' }}">
                                         {{ $row['lengkap'] ? 'Lengkap' : 'Tidak Lengkap' }}
                                         <span class="badge bg-light text-dark ms-1">{{ $row['ada'] }}/{{ $row['total'] }}</span>
                                     </a>
+                                    @endif
                                     @else
                                     <span class="badge {{ $row['lengkap'] ? 'bg-success' : 'bg-danger' }}">
                                         {{ $row['lengkap'] ? 'Lengkap' : 'Tidak Lengkap' }}
@@ -115,6 +128,44 @@
         </div>
     </div>
     @endcanCrud
+@endif
+
+@if($needPerlengkapanConfirm)
+<div class="modal fade" id="modalYakinPerlengkapan" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Konfirmasi Data Perlengkapan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Apakah Anda sudah yakin dengan data perlengkapan mobilisasi?
+            </div>
+            <div class="modal-footer">
+                <a href="{{ route('gudang.mobilisasi.perlengkapan', [$idgudang, $mobilisasi->id]) }}" class="btn btn-outline-secondary">
+                    Tidak, ke Data Perlengkapan
+                </a>
+                <a href="#" id="btnYakinYa" class="btn btn-primary">Ya, lanjut pengecekan</a>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+@if($needPerlengkapanConfirm)
+@push('scripts')
+<script>
+    document.querySelectorAll('.btn-konfirmasi-pengecekan').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var ya = document.getElementById('btnYakinYa');
+            var sep = this.dataset.pengecekanUrl.indexOf('?') === -1 ? '?' : '&';
+            ya.href = this.dataset.pengecekanUrl + sep + 'yakin=1';
+            var modal = new bootstrap.Modal(document.getElementById('modalYakinPerlengkapan'));
+            modal.show();
+        });
+    });
+</script>
+@endpush
 @endif
 
 @endsection

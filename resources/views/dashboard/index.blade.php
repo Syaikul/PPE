@@ -82,6 +82,15 @@
         padding: 1rem;
         text-align: center;
     }
+    .dashboard-panel {
+        display: flex;
+        flex-direction: column;
+        max-height: 28rem;
+    }
+    .dashboard-panel-body {
+        min-height: 0;
+        overflow-y: auto;
+    }
 </style>
 
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
@@ -96,17 +105,19 @@
 
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
-        <div class="card dashboard-summary-card">
-            <div class="card-body d-flex align-items-center gap-3">
-                <span class="dashboard-summary-icon" style="background:#eff6ff;color:#3b82f6">
-                    <i class="fas fa-users"></i>
-                </span>
-                <div>
-                    <div class="dashboard-summary-value">{{ $summary['personel'] }}</div>
-                    <small class="text-muted">Personel</small>
+        <a href="{{ route('gudang.peminjaman-ppe', $idgudang) }}" class="text-decoration-none text-reset">
+            <div class="card dashboard-summary-card">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <span class="dashboard-summary-icon" style="background:#eff6ff;color:#3b82f6">
+                        <i class="fas fa-handshake"></i>
+                    </span>
+                    <div>
+                        <div class="dashboard-summary-value">{{ $summary['peminjaman_menunggu'] }}</div>
+                        <small class="text-muted">Peminjaman menunggu approval</small>
+                    </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
         <div class="card dashboard-summary-card">
@@ -135,17 +146,19 @@
         </div>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card dashboard-summary-card">
-            <div class="card-body d-flex align-items-center gap-3">
-                <span class="dashboard-summary-icon" style="background:#f5f3ff;color:#8b5cf6">
-                    <i class="fas fa-truck"></i>
-                </span>
-                <div>
-                    <div class="dashboard-summary-value">{{ $summary['mobilisasi_aktif'] }}</div>
-                    <small class="text-muted">Mobilisasi Aktif</small>
+        <a href="{{ route('gudang.personel', $idgudang) }}" class="text-decoration-none text-reset">
+            <div class="card dashboard-summary-card">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <span class="dashboard-summary-icon" style="background:#f5f3ff;color:#8b5cf6">
+                        <i class="fas fa-users"></i>
+                    </span>
+                    <div>
+                        <div class="dashboard-summary-value">{{ $summary['personel'] }}</div>
+                        <small class="text-muted">Personel</small>
+                    </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
@@ -200,14 +213,14 @@
 
 <div class="row g-4">
     <div class="col-lg-7">
-        <div class="card shadow-sm border-0 h-100">
+        <div class="card shadow-sm border-0 dashboard-panel">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <div class="dashboard-section-title">
                     <i class="fas fa-box-open me-2 text-warning"></i>Stok Perlu Perhatian
                 </div>
                 <a href="{{ route('gudang.stok', $idgudang) }}" class="btn btn-sm btn-outline-primary">Lihat Stok</a>
             </div>
-            <div class="card-body">
+            <div class="card-body dashboard-panel-body">
                 @forelse($stokAlerts as $item)
                     <div class="alert dashboard-alert {{ $item['level'] === \App\Services\StokMinMaxService::LEVEL_RED ? 'dashboard-alert-danger' : 'dashboard-alert-warning' }} alert-dismissible fade show"
                         role="alert">
@@ -239,14 +252,14 @@
     </div>
 
     <div class="col-lg-5">
-        <div class="card shadow-sm border-0 h-100">
+        <div class="card shadow-sm border-0 dashboard-panel">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <div class="dashboard-section-title">
                     <i class="fas fa-handshake me-2 text-primary"></i>Belum Dikembalikan
                 </div>
                 <a href="{{ route('gudang.peminjaman-ppe', $idgudang) }}" class="btn btn-sm btn-outline-primary">Lihat Peminjaman</a>
             </div>
-            <div class="card-body">
+            <div class="card-body dashboard-panel-body">
                 @forelse($belumDikembalikan as $item)
                     <div class="alert dashboard-alert dashboard-alert-warning alert-dismissible fade show" role="alert">
                         <div class="dashboard-alert-body">
@@ -280,7 +293,7 @@
     </div>
     <div class="card-body">
         <div class="row g-3 text-center">
-            <div class="col-6 col-lg-3">
+            <div class="col-6 col-lg-4">
                 <a href="{{ route('gudang.approval-demob', $idgudang) }}" class="text-decoration-none">
                     <div class="border rounded p-3 h-100">
                         <div class="fs-4 fw-bold text-dark">{{ $summary['demob_menunggu'] }}</div>
@@ -288,7 +301,7 @@
                     </div>
                 </a>
             </div>
-            <div class="col-6 col-lg-3">
+            <div class="col-6 col-lg-4">
                 <a href="{{ route('gudang.permintaan', $idgudang) }}" class="text-decoration-none">
                     <div class="border rounded p-3 h-100">
                         <div class="fs-4 fw-bold text-dark">{{ $summary['mr_belum_selesai'] }}</div>
@@ -296,15 +309,7 @@
                     </div>
                 </a>
             </div>
-            <div class="col-6 col-lg-3">
-                <a href="{{ route('gudang.approval-demob', $idgudang) }}" class="text-decoration-none">
-                    <div class="border rounded p-3 h-100">
-                        <div class="fs-4 fw-bold text-dark">{{ $summary['spare_menunggu'] }}</div>
-                        <small class="text-muted">Pemakaian Spare Menunggu</small>
-                    </div>
-                </a>
-            </div>
-            <div class="col-6 col-lg-3">
+            <div class="col-6 col-lg-4">
                 <a href="{{ route('gudang.mobilisasi', $idgudang) }}" class="text-decoration-none">
                     <div class="border rounded p-3 h-100">
                         <div class="fs-4 fw-bold text-dark">{{ $summary['mobilisasi_aktif'] }}</div>

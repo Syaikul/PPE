@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\PpeKeluar;
 use App\Models\SpareBarang;
 use App\Models\SpareBarangItem;
-use App\Models\SpareBarangPemakaian;
 use App\Models\Stok;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -83,87 +82,13 @@ class SpareBarangService
         });
     }
 
-    /** Ajukan pemakaian spare ke personel penerima; menunggu Approval Demob. */
-    public static function ajukanPemakaian(SpareBarangItem $item, int $personelId, int $qty, ?string $catatan): void
-    {
-        if ($item->isReturned()) {
-            throw new \RuntimeException('Item spare ini sudah dikembalikan ke stok.');
-        }
-
-        $menunggu = (int) $item->pemakaian()
-            ->where('status', SpareBarangPemakaian::STATUS_MENUNGGU)
-            ->sum('qty');
-
-        if ($qty > ($item->sisa - $menunggu)) {
-            $tersedia = max(0, $item->sisa - $menunggu);
-
-            throw new \RuntimeException("Sisa spare tidak cukup (tersedia: {$tersedia}, termasuk yang menunggu approval).");
-        }
-
-        SpareBarangPemakaian::create([
-            'spare_barang_item_id' => $item->id,
-            'personel_id'          => $personelId,
-            'qty'                  => $qty,
-            'status'               => SpareBarangPemakaian::STATUS_MENUNGGU,
-            'catatan'              => $catatan,
-            'tanggal'              => now()->toDateString(),
-        ]);
-    }
-
-    /** Approval disetujui: sisa berkurang & tercatat di PPE Keluar. */
-    public static function approvePemakaian(SpareBarangPemakaian $pemakaian, ?string $approvalCatatan): void
-    {
-        if (! $pemakaian->isMenunggu()) {
-            throw new \RuntimeException('Pemakaian spare ini sudah diproses.');
-        }
-
-        DB::transaction(function () use ($pemakaian, $approvalCatatan) {
-            $item = SpareBarangItem::where('id', $pemakaian->spare_barang_item_id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            if ($pemakaian->qty > $item->sisa) {
-                throw new \RuntimeException('Sisa spare tidak cukup untuk disetujui.');
-            }
-
-            $sr = $item->spareBarang;
-
-            $item->decrement('sisa', $pemakaian->qty);
-
-            PpeKeluar::create([
-                'idgudang'       => $sr->idgudang,
-                'idpersonel'     => $pemakaian->personel->idpersonel,
-                'idsubbarang'    => $item->idsubbarang,
-                'idbarangvarian' => $item->idbarangvarian,
-                'qty'            => $pemakaian->qty,
-                'tanggal'        => now()->toDateString(),
-                'catatan'        => 'Spare Barang SR '.$sr->no_sr,
-                'personel_id'    => $pemakaian->personel_id,
-                'mobilisasi_id'  => null,
-            ]);
-
-            $pemakaian->update([
-                'status'           => SpareBarangPemakaian::STATUS_APPROVED,
-                'approval_catatan' => $approvalCatatan,
-                'approved_at'      => now(),
-            ]);
-        });
-    }
-
-    public static function rejectPemakaian(SpareBarangPemakaian $pemakaian, ?string $approvalCatatan): void
-    {
-        if (! $pemakaian->isMenunggu()) {
-            throw new \RuntimeException('Pemakaian spare ini sudah diproses.');
-        }
-
-        $pemakaian->update([
-            'status'           => SpareBarangPemakaian::STATUS_REJECTED,
-            'approval_catatan' => $approvalCatatan,
-        ]);
-    }
-
-    /** Kembalikan sisa spare ke stok gudang. */
-    public static function kembalikan(SpareBarang $sr): int
+    /**
+     * Selesaikan spare: sisa kembali ke stok, selisih (jumlah − sisa) langsung ke PPE Keluar.
+     *
+     * @param  array<int, int>  $sisaByItemId  spare_barang_item_id => qty yang dikembalikan
+     * @return array{dikembalikan: int, dipakai: int}
+     */
+    public static function kembalikan(SpareBarang $sr, array $sisaByItemId, string $namaPenanggungJawab): array
     {
         $items = $sr->items()->whereNull('returned_at')->get();
 
@@ -171,18 +96,27 @@ class SpareBarangService
             throw new \RuntimeException('Semua item pada SR ini sudah dikembalikan.');
         }
 
-        return DB::transaction(function () use ($sr, $items) {
+        foreach ($items as $item) {
+            if (! array_key_exists($item->id, $sisaByItemId)) {
+                throw new \RuntimeException('Isi sisa untuk semua item spare.');
+            }
+
+            $sisa = (int) $sisaByItemId[$item->id];
+            if ($sisa < 0 || $sisa > $item->sisa) {
+                throw new \RuntimeException('Sisa spare tidak valid (0 sampai '.$item->sisa.').');
+            }
+        }
+
+        return DB::transaction(function () use ($sr, $items, $sisaByItemId, $namaPenanggungJawab) {
             $totalDikembalikan = 0;
+            $totalDipakai = 0;
+            $idpersonel = $sr->personel?->idpersonel;
 
             foreach ($items as $item) {
-                $item->pemakaian()
-                    ->where('status', SpareBarangPemakaian::STATUS_MENUNGGU)
-                    ->update([
-                        'status'           => SpareBarangPemakaian::STATUS_REJECTED,
-                        'approval_catatan' => 'Dibatalkan karena spare dikembalikan ke stok.',
-                    ]);
+                $sisaKembali = (int) $sisaByItemId[$item->id];
+                $dipakai = (int) $item->sisa - $sisaKembali;
 
-                if ($item->sisa > 0) {
+                if ($sisaKembali > 0) {
                     $stok = self::findStok($sr->idgudang, $item->idsubbarang, $item->idbarangvarian);
 
                     if (! $stok) {
@@ -190,18 +124,39 @@ class SpareBarangService
                     }
 
                     $stok = Stok::where('id', $stok->id)->lockForUpdate()->firstOrFail();
-                    $stok->increment('qty', $item->sisa);
+                    $stok->increment('qty', $sisaKembali);
+                    $totalDikembalikan += $sisaKembali;
+                }
 
-                    $totalDikembalikan += $item->sisa;
+                if ($dipakai > 0) {
+                    $jumlahMinta = (int) $item->jumlah;
+                    $totalTerpakai = $jumlahMinta - $sisaKembali;
+
+                    PpeKeluar::create([
+                        'idgudang'       => $sr->idgudang,
+                        'idpersonel'     => $idpersonel,
+                        'idsubbarang'    => $item->idsubbarang,
+                        'idbarangvarian' => $item->idbarangvarian,
+                        'qty'            => $dipakai,
+                        'tanggal'        => now()->toDateString(),
+                        'catatan'        => $namaPenanggungJawab.' minta spare '.$jumlahMinta.' dan dipakai '.$totalTerpakai,
+                        'personel_id'    => $sr->personel_id,
+                        'mobilisasi_id'  => $sr->mobilisasi_id,
+                    ]);
+
+                    $totalDipakai += $dipakai;
                 }
 
                 $item->update([
-                    'sisa'        => 0,
+                    'sisa'        => $sisaKembali,
                     'returned_at' => now()->toDateString(),
                 ]);
             }
 
-            return $totalDikembalikan;
+            return [
+                'dikembalikan' => $totalDikembalikan,
+                'dipakai'      => $totalDipakai,
+            ];
         });
     }
 

@@ -1,0 +1,102 @@
+[
+  {
+    "id": "TC001",
+    "title": "auth_unauthenticated_redirect_and_register_404",
+    "description": "Verify unauthenticated GET /home /dashboard /users /master-sync /gudang/1/stok redirect to /login (302). GET /register returns 404. POST /login without CSRF returns 419."
+  },
+  {
+    "id": "TC002",
+    "title": "auth_login_all_roles_valid_credentials",
+    "description": "Login each test account via HTML _token: SuperAdmin test@example.com/admin, AdminPPE adminppe@example.com/password123, HSE hse@example.com/password123, Manager manager@example.com/password123, AdminPPE2 adminppe2@example.com/password123. Each must reach GET /home with 200."
+  },
+  {
+    "id": "TC003",
+    "title": "users_superadmin_only_access",
+    "description": "SuperAdmin GET /users returns 200 HTML. AdminPPE Manager HSE GET /users must redirect to /home (302). Unauthenticated GET /users redirects to /login."
+  },
+  {
+    "id": "TC004",
+    "title": "master_sync_superadmin_only",
+    "description": "SuperAdmin GET /master-sync returns 200. AdminPPE HSE Manager GET /master-sync redirect to /home (302)."
+  },
+  {
+    "id": "TC005",
+    "title": "gudang_idor_unauthorized_warehouse",
+    "description": "adminppe@example.com (gudang 1 only) GET /gudang/2/masuk redirects to /home (302). adminppe2@example.com (gudang 2 only) GET /gudang/1/masuk redirects to /home (302). SuperAdmin can enter both."
+  },
+  {
+    "id": "TC006",
+    "title": "gudang_authorized_masuk_sets_session",
+    "description": "adminppe@example.com GET /gudang/1/masuk then GET /dashboard returns 200. adminppe2@example.com GET /gudang/2/masuk then GET /dashboard returns 200."
+  },
+  {
+    "id": "TC007",
+    "title": "dashboard_requires_gudang_session",
+    "description": "After login without entering gudang, GET /dashboard redirects to /home (302). After /gudang/1/masuk, GET /dashboard returns 200 HTML."
+  },
+  {
+    "id": "TC008",
+    "title": "stok_view_and_crud_by_role",
+    "description": "Enter gudang 1. AdminPPE and SuperAdmin GET /gudang/1/stok 200. Manager HSE GET /gudang/1/stok 200 (view). Manager POST /gudang/1/stok redirects /home (302). HSE POST /gudang/1/stok redirects /home (302). AdminPPE POST with valid CSRF should succeed or redirect not home."
+  },
+  {
+    "id": "TC009",
+    "title": "personel_view_and_crud_by_role",
+    "description": "Enter gudang 1. All roles GET /gudang/1/personel 200. Manager POST /gudang/1/personel redirects /home. AdminPPE GET 200."
+  },
+  {
+    "id": "TC010",
+    "title": "transfer_barang_access_by_role",
+    "description": "Enter gudang 1. AdminPPE SuperAdmin GET /gudang/1/transfer-barang 200. Manager GET 200 view. Manager POST redirects /home."
+  },
+  {
+    "id": "TC011",
+    "title": "ppe_masuk_keluar_view_all_roles",
+    "description": "Enter gudang 1. All roles GET /gudang/1/ppe-masuk and /gudang/1/ppe-keluar return 200."
+  },
+  {
+    "id": "TC012",
+    "title": "pemakaian_ppe_view_all_roles",
+    "description": "Enter gudang 1. All roles GET /gudang/1/pemakaian-ppe returns 200."
+  },
+  {
+    "id": "TC013",
+    "title": "permintaan_buat_admin_only",
+    "description": "Enter gudang 1. AdminPPE SuperAdmin GET /gudang/1/permintaan/buat-tabel 200. Manager HSE GET redirect /home (302)."
+  },
+  {
+    "id": "TC014",
+    "title": "permintaan_list_view_by_role",
+    "description": "Enter gudang 1. All roles GET /gudang/1/permintaan 200 (view access)."
+  },
+  {
+    "id": "TC015",
+    "title": "mobilisasi_view_and_create_by_role",
+    "description": "Enter gudang 1. All roles GET /gudang/1/mobilisasi 200. Manager HSE GET /gudang/1/mobilisasi/create redirect /home. AdminPPE GET create 200."
+  },
+  {
+    "id": "TC016",
+    "title": "demobilisasi_view_by_role",
+    "description": "Enter gudang 1. All roles GET /gudang/1/demobilisasi 200."
+  },
+  {
+    "id": "TC017",
+    "title": "approval_demob_hse_superadmin_only",
+    "description": "Enter gudang 1. HSE SuperAdmin GET /gudang/1/approval-demob 200. AdminPPE Manager GET redirect /home (302)."
+  },
+  {
+    "id": "TC018",
+    "title": "peminjaman_ppe_access_by_role",
+    "description": "Enter gudang 1. All roles GET /gudang/1/peminjaman-ppe 200. AdminPPE Manager view only POST redirect /home. HSE POST with CSRF allowed."
+  },
+  {
+    "id": "TC019",
+    "title": "home_shows_gudang_access_flags",
+    "description": "adminppe@example.com GET /home HTML contains gudang 1 accessible and gudang 2 not accessible (bisa_akses or Tidak ada akses text)."
+  },
+  {
+    "id": "TC020",
+    "title": "csrf_protection_on_post",
+    "description": "Authenticated session POST /gudang/1/stok without _token returns 419."
+  }
+]

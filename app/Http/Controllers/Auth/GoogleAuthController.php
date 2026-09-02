@@ -75,10 +75,25 @@ class GoogleAuthController extends Controller
             'google_id'         => $googleUser->getId(),
             'email_verified_at' => $user->email_verified_at ?? now(),
             'name'              => $user->name ?: ($googleUser->getName() ?: $email),
+            'avatar'            => $this->googleAvatarUrl($googleUser->getAvatar()),
         ])->save();
 
         Auth::login($user, true);
 
         return redirect()->intended('/home');
+    }
+
+    private function googleAvatarUrl(?string $url): ?string
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return null;
+        }
+
+        if (preg_match('/=s\d+-c$/', $url)) {
+            return (string) preg_replace('/=s\d+-c$/', '=s128-c', $url);
+        }
+
+        return $url;
     }
 }

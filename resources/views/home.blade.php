@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Gudang</title>
-    <link rel="icon" href="{{ asset('template') }}/assets/img/kaiadmin/favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/png" sizes="128x128" href="{{ asset('images/favicon.png') }}?v=2">
     <link rel="stylesheet" href="{{ asset('css/home.css') }}">
 </head>
 
